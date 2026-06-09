@@ -349,7 +349,7 @@
   {
     "taskId": "mobile-package-scaffold",
     "description": "Create/initialise the packages/mobile React Native app depending only on @aya/shared, with TypeScript strict and a typed API client for POST /uploads, PUT to S3, POST /pages, and POST /shares using shared schemas.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "shared-api-contracts"
     ],

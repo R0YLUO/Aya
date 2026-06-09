@@ -1,0 +1,29 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    /* Pure-logic modules (api client, store, scan/share orchestration, error
+       mapping) are framework-free and run under node:test. They use Node module
+       resolution and import the framework-free files only. RN .tsx components
+       are excluded here — they are covered by `typecheck` (tsconfig.json). */
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "verbatimModuleSyntax": false,
+    "rootDir": "src",
+    "outDir": "dist-test",
+    "noEmit": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "types": ["node"]
+  },
+  "include": [
+    "src/**/*.test.ts",
+    "src/api/**/*.ts",
+    "src/store/**/*.ts",
+    "src/scan/**/*.ts",
+    "src/share/**/*.ts",
+    "src/errors/**/*.ts",
+    "src/test-support/**/*.ts"
+  ],
+  "exclude": ["dist", "dist-test", "node_modules", "src/**/*.tsx"]
+}

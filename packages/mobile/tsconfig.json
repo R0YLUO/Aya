@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    /* React Native uses the Metro bundler, not Node's resolver. Override the
+       base's NodeNext/verbatim settings to the conventional RN setup so .tsx
+       and extensionless relative imports work as in a real RN app, while still
+       inheriting strict mode from the base. */
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "verbatimModuleSyntax": false,
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM"],
+    "types": ["react", "node"],
+    "rootDir": "src",
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "dist-test", "node_modules"]
+}
