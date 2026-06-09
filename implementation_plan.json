@@ -10,7 +10,7 @@
   {
     "taskId": "shared-package-scaffold",
     "description": "Create the packages/shared workspace package (package.json named @aya/shared, tsconfig extending the base, src/index.ts barrel, build/typecheck/lint/clean scripts). It has no runtime dependencies except zod.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "repo-base-tsconfig"
     ],
