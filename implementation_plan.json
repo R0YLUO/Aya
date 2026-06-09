@@ -133,7 +133,7 @@
   {
     "taskId": "api-package-scaffold",
     "description": "Create the packages/api workspace package depending on @aya/shared and @aya/llm plus AWS SDK v3 clients (DynamoDB, S3). Include tsconfig, scripts, and a handlers/ + services/ + repositories/ folder structure per the architecture.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "shared-api-contracts"
     ],
