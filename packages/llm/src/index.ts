@@ -31,6 +31,13 @@ export {
 } from './ocr.js';
 export type { OcrResult, OcrStatus } from './ocr.js';
 
+export {
+  AnalysisResultSchema,
+  PhraseTokenSchema,
+  buildAnalysisSystemPrompt,
+} from './analysis.js';
+export type { AnalysisResult, PhraseToken } from './analysis.js';
+
 /** Image input accepted by {@link runOcr}: raw bytes or an S3/HTTP(S) URL. */
 export type OcrImageInput =
   | { kind: 'bytes'; data: Uint8Array; mediaType: string }

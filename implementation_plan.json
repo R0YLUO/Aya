@@ -111,7 +111,7 @@
   {
     "taskId": "llm-analysis-schema-and-prompt",
     "description": "Define the analysis structured-output Zod schema (AnalysisResult { tokens: PhraseToken[] } with PhraseToken { index, original, pinyin|null, translation|null, contextualMeaning|null }) and the analysis prompt encoding the pipeline doc intent (segment into meaningful phrases, keep idioms/compounds/proper nouns whole, contextual meaning, null analysis for punctuation/whitespace, exact reconstruction).",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "llm-model-config"
     ],
