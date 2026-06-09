@@ -2,8 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     /* Pure-logic modules (api client, store, scan/share orchestration, error
-       mapping) are framework-free and run under node:test. They use Node module
-       resolution and import the framework-free files only. RN .tsx components
+       mapping, reducers) are framework-free and run under node:test. They use
+       Node module resolution. React/React-Native modules (hooks, .tsx screens)
        are excluded here — they are covered by `typecheck` (tsconfig.json). */
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
@@ -16,16 +16,20 @@
     "sourceMap": false,
     "types": ["node"]
   },
-  "include": [
-    "src/**/*.test.ts",
-    "src/api/**/*.ts",
-    "src/store/**/*.ts",
-    "src/scan/**/*.ts",
-    "src/share/**/*.ts",
-    "src/errors/**/*.ts",
+  "files": [
+    "src/api/client.ts",
+    "src/store/LocalPageStore.ts",
+    "src/store/asyncStorageBackend.ts",
+    "src/store/types.ts",
+    "src/scan/runScan.ts",
+    "src/scan/scanState.ts",
+    "src/errors/messages.ts",
     "src/camera/types.ts",
-    "src/reader/tokens.ts",
-    "src/test-support/**/*.ts"
-  ],
-  "exclude": ["dist", "dist-test", "node_modules", "src/**/*.tsx"]
+    "src/test-support/fixtures.ts",
+    "src/test-support/index.ts",
+    "src/api/client.test.ts",
+    "src/store/LocalPageStore.test.ts",
+    "src/scan/runScan.test.ts",
+    "src/camera/captureReducer.test.ts"
+  ]
 }

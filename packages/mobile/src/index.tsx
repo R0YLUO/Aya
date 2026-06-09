@@ -31,3 +31,16 @@ export {
   type StorageBackend,
   type AsyncStorageLike,
 } from './store/index.js';
+
+export {
+  runScan,
+  useScanFlow,
+  ScanningScreen,
+  scanReducer,
+  initialScanState,
+  type ScanDeps,
+  type UseScanFlow,
+  type ScanState,
+  type ScanEvent,
+  type ScanningScreenProps,
+} from './scan/index.js';

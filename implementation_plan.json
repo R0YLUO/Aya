@@ -369,7 +369,7 @@
   {
     "taskId": "mobile-scan-flow",
     "description": "Implement the scan submission flow: on confirm, request a presigned upload, PUT the image to S3, then POST /pages; show a non-blocking loading state during the ~15s processing and store the returned AnalyzedPage in the local-first store.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "mobile-camera-capture",
       "mobile-local-store"
