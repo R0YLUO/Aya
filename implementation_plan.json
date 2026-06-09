@@ -20,7 +20,7 @@
   {
     "taskId": "shared-domain-types",
     "description": "Define the domain TypeScript interfaces Page, Phrase, Share, and AnalyzedPage in packages/shared exactly as specified in the data model doc (fields, types, nullable analysis fields, 1-based index).",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "shared-package-scaffold"
     ],
