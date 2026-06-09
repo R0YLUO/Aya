@@ -8,6 +8,7 @@
 // real chains in the llm-run-ocr / llm-analyze-text tasks.
 
 import type { Phrase } from '@aya/shared';
+import type { OcrResult } from './ocr.js';
 
 export {
   loadLlmConfig,
@@ -23,19 +24,17 @@ export {
 } from './tracing.js';
 export type { Stage, RunTagInput, RunMetadata } from './tracing.js';
 
+export {
+  OcrResultSchema,
+  OcrStatusSchema,
+  buildOcrSystemPrompt,
+} from './ocr.js';
+export type { OcrResult, OcrStatus } from './ocr.js';
+
 /** Image input accepted by {@link runOcr}: raw bytes or an S3/HTTP(S) URL. */
 export type OcrImageInput =
   | { kind: 'bytes'; data: Uint8Array; mediaType: string }
   | { kind: 'url'; url: string };
-
-/** Status discriminant returned by the OCR call (specs/04-llm-pipeline.md). */
-export type OcrStatus = 'ok' | 'unreadable' | 'no_chinese_text';
-
-/** Validated result of the OCR call. `fullText` is "" unless status is "ok". */
-export interface OcrResult {
-  status: OcrStatus;
-  fullText: string;
-}
 
 /**
  * Call ① — OCR. Extracts printed Simplified-Chinese text from an image via a

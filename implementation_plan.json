@@ -90,7 +90,7 @@
   {
     "taskId": "llm-ocr-schema-and-prompt",
     "description": "Define the OCR structured-output Zod schema (OcrResult { status: ok|unreadable|no_chinese_text, fullText }) and the OCR prompt template in packages/llm, encoding the prompt intent from the LLM pipeline doc (transcribe Simplified Chinese exactly, preserve line breaks/punctuation, no translation, signal the two failure modes).",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "llm-model-config"
     ],
