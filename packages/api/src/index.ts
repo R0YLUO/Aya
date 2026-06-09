@@ -22,3 +22,5 @@ export {
   analysisFailed,
 } from './errors.js';
 export type { ErrorDetails, ErrorResponse } from './errors.js';
+
+export { PageRepository } from './repositories/page-repository.js';

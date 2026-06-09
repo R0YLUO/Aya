@@ -153,7 +153,7 @@
   {
     "taskId": "api-dynamodb-repository",
     "description": "Implement the DynamoDB single-table repository in packages/api that translates between domain types and table items per the data model keys: Page (PK PAGE#id, SK META), Phrase (PK PAGE#id, SK PHRASE#<index padded>), Share (PK SHARE#code, SK META). Provide savePageWithPhrasesAndShare (transactional/batch write), getPageWithPhrases (single partition query, ordered by index), and resolveShare (GetItem then page query).",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "api-package-scaffold",
       "shared-reconstruction-invariant"
