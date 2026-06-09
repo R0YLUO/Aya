@@ -1,0 +1,529 @@
+[
+  {
+    "taskId": "repo-base-tsconfig",
+    "description": "Add a shared base TypeScript configuration (tsconfig.base.json) at the repo root with strict mode enabled, plus a root .eslintrc and prettier config, so every package can extend a single compiler/lint contract. Wire the existing turbo.json build/typecheck/lint tasks to expect a tsconfig per package.",
+    "status": "done",
+    "dependencies": [],
+    "acceptanceCriteria": "A tsconfig.base.json exists at repo root with \"strict\": true and modern module/target settings (Node 22). A root lint config exists. Running `npm run typecheck` and `npm run lint` from the root succeeds (no packages yet, so it is a no-op pass). A new package can `extends` the base config and inherit strict mode.",
+    "category": "backend"
+  },
+  {
+    "taskId": "shared-package-scaffold",
+    "description": "Create the packages/shared workspace package (package.json named @aya/shared, tsconfig extending the base, src/index.ts barrel, build/typecheck/lint/clean scripts). It has no runtime dependencies except zod.",
+    "status": "todo",
+    "dependencies": [
+      "repo-base-tsconfig"
+    ],
+    "acceptanceCriteria": "`packages/shared/package.json` declares name @aya/shared and a zod dependency. `npm install` links it as a workspace. `npm run build -w packages/shared` emits dist/. `npm run typecheck -w packages/shared` passes. An importing package can `import { } from '@aya/shared'`.",
+    "category": "data"
+  },
+  {
+    "taskId": "shared-domain-types",
+    "description": "Define the domain TypeScript interfaces Page, Phrase, Share, and AnalyzedPage in packages/shared exactly as specified in the data model doc (fields, types, nullable analysis fields, 1-based index).",
+    "status": "todo",
+    "dependencies": [
+      "shared-package-scaffold"
+    ],
+    "acceptanceCriteria": "Exported interfaces Page { id, fullText, createdAt }, Phrase { id, pageId, index, original, pinyin|null, translation|null, contextualMeaning|null }, Share { code, pageId, createdAt }, AnalyzedPage { page, phrases } exist and match the data model spec field-for-field. Types compile under strict mode and are re-exported from the package barrel.",
+    "category": "data"
+  },
+  {
+    "taskId": "shared-zod-domain-schemas",
+    "description": "Add Zod schemas for Page, Phrase, Share, and AnalyzedPage in packages/shared, paired one-to-one with the domain interfaces, and ensure z.infer of each schema is assignable to its interface.",
+    "status": "todo",
+    "dependencies": [
+      "shared-domain-types"
+    ],
+    "acceptanceCriteria": "PageSchema, PhraseSchema, ShareSchema, AnalyzedPageSchema exported. Each schema enforces: phrase.index is a positive integer; pinyin/translation/contextualMeaning are nullable strings; createdAt parses as ISO 8601. A compile-time assertion (e.g. satisfies) confirms z.infer<typeof PhraseSchema> matches the Phrase interface. Unit tests validate a good payload passes and a bad one (negative index, missing field) fails.",
+    "category": "data"
+  },
+  {
+    "taskId": "shared-reconstruction-invariant",
+    "description": "Implement and export a reusable invariant helper in packages/shared that checks the reconstruction rule: phrases sorted by index, concatenating each phrase.original equals a given fullText, indexes are unique and contiguous from 1, and all phrases share the same pageId.",
+    "status": "todo",
+    "dependencies": [
+      "shared-zod-domain-schemas"
+    ],
+    "acceptanceCriteria": "An exported function (e.g. checkReconstruction(fullText, phrases)) returns a structured result {ok:boolean, reason?} . Tests cover: valid set passes; gap in index fails; duplicate index fails; concatenation mismatch fails; wrong pageId fails. The function does not mutate inputs.",
+    "category": "data"
+  },
+  {
+    "taskId": "shared-api-contracts",
+    "description": "Define Zod request/response schemas for every REST endpoint in packages/shared: POST /uploads, POST /pages, POST /shares, GET /shares/{code}, GET /health, plus the standard error envelope and the machine-readable error code enum.",
+    "status": "todo",
+    "dependencies": [
+      "shared-zod-domain-schemas"
+    ],
+    "acceptanceCriteria": "Exported schemas exist for UploadRequest/UploadResponse, ScanRequest({imageKey})/ScanResponse(AnalyzedPage), ShareRequest({page,phrases})/ShareResponse({code,url,pageId}), ShareResolveResponse(AnalyzedPage), HealthResponse, ErrorEnvelope({error:{code,message,details?}}). An ErrorCode union/enum includes image_unreadable, no_chinese_text, image_not_found, analysis_failed, validation_error, share_not_found. Tests validate each request/response example from the API doc parses successfully.",
+    "category": "data"
+  },
+  {
+    "taskId": "llm-package-scaffold",
+    "description": "Create the packages/llm workspace package depending on @aya/shared, langchain, the Anthropic LangChain integration, and zod. Include tsconfig, build/typecheck/lint/clean scripts, and an index barrel exporting runOcr and analyzeText (initially stubbed).",
+    "status": "todo",
+    "dependencies": [
+      "shared-api-contracts"
+    ],
+    "acceptanceCriteria": "`packages/llm/package.json` named @aya/llm declares dependencies on @aya/shared and LangChain + Anthropic packages. It builds and typechecks. The barrel exports runOcr and analyzeText symbols (stubs that throw not-implemented are acceptable at this step).",
+    "category": "functional"
+  },
+  {
+    "taskId": "llm-model-config",
+    "description": "Implement packages/llm config module that reads model id, temperature, and maxTokens for the ocr and analysis stages from environment variables (AYA_OCR_MODEL, AYA_ANALYSIS_MODEL, ANTHROPIC_API_KEY), with temperature 0 for both stages. Model ids must come from env, never hard-coded literals.",
+    "status": "todo",
+    "dependencies": [
+      "llm-package-scaffold"
+    ],
+    "acceptanceCriteria": "A config object exposes ocr {model, temperature:0, maxTokens} and analysis {model, temperature:0, maxTokens} sourced from env. Missing required env (model id or API key) throws a clear error at construction. No claude model id string is hard-coded in source. Unit test sets env and asserts the resolved config; another asserts a missing var throws.",
+    "category": "functional"
+  },
+  {
+    "taskId": "llm-langsmith-wiring",
+    "description": "Wire LangSmith tracing for all LLM calls via environment (LANGCHAIN_TRACING_V2, LANGCHAIN_API_KEY, LANGCHAIN_PROJECT) and provide a helper to attach run tags/metadata (stage, pageId, model, env) to each invocation without changes at call sites.",
+    "status": "todo",
+    "dependencies": [
+      "llm-model-config"
+    ],
+    "acceptanceCriteria": "A tracing helper attaches stage/pageId/model/env tags to a LangChain run config. When LANGCHAIN_TRACING_V2 is unset/false, calls still work (tracing disabled) and no error is thrown. Tests assert the tag/metadata object is built correctly for given inputs.",
+    "category": "functional"
+  },
+  {
+    "taskId": "llm-ocr-schema-and-prompt",
+    "description": "Define the OCR structured-output Zod schema (OcrResult { status: ok|unreadable|no_chinese_text, fullText }) and the OCR prompt template in packages/llm, encoding the prompt intent from the LLM pipeline doc (transcribe Simplified Chinese exactly, preserve line breaks/punctuation, no translation, signal the two failure modes).",
+    "status": "todo",
+    "dependencies": [
+      "llm-model-config"
+    ],
+    "acceptanceCriteria": "OcrResult schema exported and matches the spec (fullText is \"\" when status !== ok). A prompt template string/builder exists capturing: faithful transcription, preserve line breaks & punctuation, do not translate/correct/summarise, return unreadable for blurry/dark, return no_chinese_text when absent. Schema unit tests cover each status value.",
+    "category": "functional"
+  },
+  {
+    "taskId": "llm-run-ocr",
+    "description": "Implement runOcr(imageBytesOrUrl) in packages/llm: build a Claude vision message with the image, invoke with structured output bound to OcrResult, return the validated result. Include bounded retries with backoff for transient model/network errors.",
+    "status": "todo",
+    "dependencies": [
+      "llm-ocr-schema-and-prompt",
+      "llm-langsmith-wiring"
+    ],
+    "acceptanceCriteria": "runOcr accepts an image input and returns a validated OcrResult. On a transient error it retries a bounded number of times then throws. With a mocked Claude client: returns ok+fullText for a good response; returns status unreadable / no_chinese_text faithfully; throws after exhausting retries on persistent transient failure. The vision message includes the configured ocr model and temperature 0.",
+    "category": "functional"
+  },
+  {
+    "taskId": "llm-analysis-schema-and-prompt",
+    "description": "Define the analysis structured-output Zod schema (AnalysisResult { tokens: PhraseToken[] } with PhraseToken { index, original, pinyin|null, translation|null, contextualMeaning|null }) and the analysis prompt encoding the pipeline doc intent (segment into meaningful phrases, keep idioms/compounds/proper nouns whole, contextual meaning, null analysis for punctuation/whitespace, exact reconstruction).",
+    "status": "todo",
+    "dependencies": [
+      "llm-model-config"
+    ],
+    "acceptanceCriteria": "AnalysisResult and PhraseToken schemas exported matching the spec. The prompt captures: split into ordered tokens that concatenate exactly to the input including punctuation and line breaks; keep 成语/compounds/proper nouns whole; never split per-character unless standalone; provide pinyin with tone marks, translation, contextualMeaning for words; null for punctuation/whitespace; index from 1. Schema tests validate a sample token array.",
+    "category": "functional"
+  },
+  {
+    "taskId": "llm-analyze-text",
+    "description": "Implement analyzeText(fullText, pageId) in packages/llm: invoke Claude with structured output bound to AnalysisResult, run the reconstruction check (tokens.join('') === fullText); on failure retry once feeding back the discrepancy, then fail; on success assign uuid id and pageId to each token producing a validated Phrase[].",
+    "status": "todo",
+    "dependencies": [
+      "llm-analysis-schema-and-prompt",
+      "llm-langsmith-wiring",
+      "shared-reconstruction-invariant"
+    ],
+    "acceptanceCriteria": "analyzeText returns Phrase[] ordered by index with ids and pageId assigned, passing the shared reconstruction invariant. With a mocked client: a correct token set returns valid phrases; a first-attempt reconstruction mismatch triggers exactly one retry; a persistent mismatch throws an analysis-failure error; a structured-output parse failure triggers one bounded retry then fails. Uses configured analysis model and temperature 0.",
+    "category": "functional"
+  },
+  {
+    "taskId": "api-package-scaffold",
+    "description": "Create the packages/api workspace package depending on @aya/shared and @aya/llm plus AWS SDK v3 clients (DynamoDB, S3). Include tsconfig, scripts, and a handlers/ + services/ + repositories/ folder structure per the architecture.",
+    "status": "todo",
+    "dependencies": [
+      "shared-api-contracts"
+    ],
+    "acceptanceCriteria": "`packages/api/package.json` named @aya/api depends on @aya/shared, @aya/llm, and @aws-sdk/client-dynamodb + @aws-sdk/client-s3 (and presigner). It builds and typechecks. Folder structure for handlers, services, and repositories exists.",
+    "category": "backend"
+  },
+  {
+    "taskId": "api-error-envelope",
+    "description": "Implement an error helper layer in packages/api that maps domain/LLM errors to the consistent HTTP error envelope and status codes from the API doc (400 validation_error, 404 image_not_found/share_not_found, 422 image_unreadable/no_chinese_text, 502 analysis_failed, 500 unexpected).",
+    "status": "todo",
+    "dependencies": [
+      "api-package-scaffold"
+    ],
+    "acceptanceCriteria": "A function turns a typed error into { statusCode, body:{ error:{ code, message, details? } } } using the shared ErrorCode enum. Unit tests assert each PRD failure maps to the correct HTTP status and code, and an unknown error maps to 500. Messages are client-displayable strings matching the PRD copy where specified.",
+    "category": "backend"
+  },
+  {
+    "taskId": "api-dynamodb-repository",
+    "description": "Implement the DynamoDB single-table repository in packages/api that translates between domain types and table items per the data model keys: Page (PK PAGE#id, SK META), Phrase (PK PAGE#id, SK PHRASE#<index padded>), Share (PK SHARE#code, SK META). Provide savePageWithPhrasesAndShare (transactional/batch write), getPageWithPhrases (single partition query, ordered by index), and resolveShare (GetItem then page query).",
+    "status": "todo",
+    "dependencies": [
+      "api-package-scaffold",
+      "shared-reconstruction-invariant"
+    ],
+    "acceptanceCriteria": "Repository writes a Page META item, N Phrase items with zero-padded sort keys, and a Share item in one transaction/batch. getPageWithPhrases returns phrases sorted by ascending index. resolveShare returns null/undefined for an unknown code and the AnalyzedPage for a known one. Tested against DynamoDB Local or a mocked client: round-trip of a page preserves the reconstruction invariant; padding makes lexicographic order equal numeric order for >9 phrases.",
+    "category": "backend"
+  },
+  {
+    "taskId": "api-s3-presign-service",
+    "description": "Implement the S3 presign service in packages/api that generates a presigned PUT URL and a dated object key (uploads/YYYY/MM/DD/<uuid>.jpg) for image uploads, with a short expiry, and a helper to fetch an uploaded object's bytes (or signal not-found) for the scan path.",
+    "status": "todo",
+    "dependencies": [
+      "api-package-scaffold"
+    ],
+    "acceptanceCriteria": "presignUpload(contentType?) returns { uploadUrl, imageKey, expiresInSeconds } with a dated key and default content type image/jpeg. getUploadedImage(imageKey) returns bytes or a not-found signal mapped to image_not_found. Tests (mocked S3 client/presigner) assert URL/key shape, default content type, and not-found handling.",
+    "category": "backend"
+  },
+  {
+    "taskId": "api-short-url-service",
+    "description": "Implement the short-URL service in packages/api that mints an unguessable URL-safe code (e.g. 8-char base62/nanoid) for a share and composes the public URL from a configured web base URL.",
+    "status": "todo",
+    "dependencies": [
+      "api-package-scaffold"
+    ],
+    "acceptanceCriteria": "generateShareCode() returns an 8-char URL-safe code; codes are unique across many generations in a test. buildShareUrl(code) returns `${WEB_BASE_URL}/s/${code}` using configured env. Tests assert code charset/length and URL composition.",
+    "category": "backend"
+  },
+  {
+    "taskId": "api-handler-health",
+    "description": "Implement the GET /health Lambda handler returning { status: 'ok', version } validated against the shared HealthResponse schema.",
+    "status": "todo",
+    "dependencies": [
+      "api-error-envelope"
+    ],
+    "acceptanceCriteria": "Handler returns 200 with { status:'ok', version } matching HealthResponse. Unit test invokes the handler and asserts body and status.",
+    "category": "backend"
+  },
+  {
+    "taskId": "api-handler-uploads",
+    "description": "Implement the POST /uploads Lambda handler: validate the optional request body with the shared schema, call the presign service, and return UploadResponse.",
+    "status": "todo",
+    "dependencies": [
+      "api-s3-presign-service",
+      "api-error-envelope"
+    ],
+    "acceptanceCriteria": "Handler returns 200 with { uploadUrl, imageKey, expiresInSeconds }. An empty body defaults contentType to image/jpeg. A malformed body returns 400 validation_error in the standard envelope. Unit test covers success and validation failure.",
+    "category": "backend"
+  },
+  {
+    "taskId": "api-handler-pages",
+    "description": "Implement the POST /pages scan handler: validate { imageKey }, fetch the image from S3, run runOcr; map OCR unreadable/no_chinese_text to 422 errors; on ok create a Page (uuid, fullText, createdAt) and run analyzeText; return { page, phrases }. Persist nothing. Emit the per-scan structured log line (page_scanned) with latencies, token counts, phraseCount, and outcome.",
+    "status": "todo",
+    "dependencies": [
+      "api-handler-uploads",
+      "llm-run-ocr",
+      "llm-analyze-text",
+      "api-dynamodb-repository"
+    ],
+    "acceptanceCriteria": "On a good image returns 200 with a valid AnalyzedPage whose phrases satisfy the reconstruction invariant; nothing is written to DynamoDB. OCR unreadable -> 422 image_unreadable; no_chinese_text -> 422 no_chinese_text; missing/expired image key -> 404 image_not_found; analysis failure -> 502 analysis_failed. A page_scanned JSON log line is emitted with ocrStatus, ocrLatencyMs, analysisLatencyMs, totalLatencyMs, phraseCount, token counts, and outcome. Tests use mocked llm/s3/repo to cover each branch and assert no persistence on the happy path.",
+    "category": "backend"
+  },
+  {
+    "taskId": "api-handler-shares-create",
+    "description": "Implement the POST /shares handler: validate { page, phrases } against shared schemas AND the reconstruction invariant (phrases reference page.id, contiguous 1-based unique indexes, concatenation equals page.fullText); mint a code; persist Page+Phrases+Share transactionally; return 201 { code, url, pageId }.",
+    "status": "todo",
+    "dependencies": [
+      "api-dynamodb-repository",
+      "api-short-url-service",
+      "api-error-envelope",
+      "shared-reconstruction-invariant"
+    ],
+    "acceptanceCriteria": "A valid payload returns 201 with { code, url, pageId } and persists exactly one Page item, N Phrase items, and one Share item. A payload failing any invariant (mismatched pageId, index gap/duplicate, concatenation != fullText) returns 400 validation_error and writes nothing. Tests cover success and each invariant violation.",
+    "category": "backend"
+  },
+  {
+    "taskId": "api-handler-shares-resolve",
+    "description": "Implement the GET /shares/{code} handler: resolve the code to a pageId, load the page and phrases via a single partition query, and return { page, phrases }; unknown code returns 404 share_not_found.",
+    "status": "todo",
+    "dependencies": [
+      "api-dynamodb-repository",
+      "api-error-envelope"
+    ],
+    "acceptanceCriteria": "Known code returns 200 with an AnalyzedPage (phrases ordered by index, satisfying the reconstruction invariant). Unknown/expired code returns 404 share_not_found in the standard envelope. Tests cover both cases with a mocked repository.",
+    "category": "backend"
+  },
+  {
+    "taskId": "api-router",
+    "description": "Wire all handlers into the API routing layer (mapping HTTP method + path to handler, JSON parsing, central error catch that emits the standard envelope and 500 for unexpected errors). Ensure routes match the API doc exactly.",
+    "status": "todo",
+    "dependencies": [
+      "api-handler-health",
+      "api-handler-uploads",
+      "api-handler-pages",
+      "api-handler-shares-create",
+      "api-handler-shares-resolve"
+    ],
+    "acceptanceCriteria": "Routes resolve: POST /uploads, POST /pages, POST /shares, GET /shares/{code}, GET /health. Unknown route returns 404. Any uncaught handler error is converted to the standard error envelope with a 500. An integration-style test exercises each route through the router.",
+    "category": "backend"
+  },
+  {
+    "taskId": "infra-package-scaffold",
+    "description": "Create the packages/infra SST app scaffold (sst.config.ts, package.json, stage configuration for dev and prod) wiring the AWS account/region and the per-stage naming convention aya-<stage>.",
+    "status": "todo",
+    "dependencies": [
+      "api-router"
+    ],
+    "acceptanceCriteria": "`packages/infra` contains an SST app that synthesizes without error for stage dev (e.g. `sst diff`/typecheck passes). Stage name flows into resource names (aya-<stage>, aya-uploads-<stage>). No secrets are committed.",
+    "category": "backend"
+  },
+  {
+    "taskId": "infra-dynamodb-table",
+    "description": "Define the DynamoDB single-table (aya-<stage>) in SST with PK/SK schema, on-demand billing, and an optional (disabled-by-default) TTL attribute, and inject AYA_TABLE_NAME into the API Lambda environment.",
+    "status": "todo",
+    "dependencies": [
+      "infra-package-scaffold"
+    ],
+    "acceptanceCriteria": "Synthesized stack includes a table named aya-<stage> with string PK and SK, PAY_PER_REQUEST billing, and no GSIs. The table name is exposed to Lambda via AYA_TABLE_NAME. Infra typechecks/synthesizes.",
+    "category": "backend"
+  },
+  {
+    "taskId": "infra-s3-bucket",
+    "description": "Define the ephemeral uploads S3 bucket (aya-uploads-<stage>) in SST with a lifecycle rule that auto-deletes objects shortly after creation, CORS allowing the presigned PUT from clients, and inject AYA_UPLOAD_BUCKET into the API Lambda environment.",
+    "status": "todo",
+    "dependencies": [
+      "infra-package-scaffold"
+    ],
+    "acceptanceCriteria": "Synthesized stack includes bucket aya-uploads-<stage> with a lifecycle expiration rule on the uploads/ prefix and CORS permitting PUT. AYA_UPLOAD_BUCKET is exposed to Lambda. Infra typechecks/synthesizes.",
+    "category": "backend"
+  },
+  {
+    "taskId": "infra-api-gateway-lambda",
+    "description": "Define the HTTP API Gateway and Lambda functions in SST for the five routes, with the POST /pages function given a generous timeout (above the ~15s LLM budget, under the 29s API Gateway limit) and adequate memory, plus IAM grants for the table and bucket and the model/LangSmith env vars.",
+    "status": "todo",
+    "dependencies": [
+      "infra-dynamodb-table",
+      "infra-s3-bucket"
+    ],
+    "acceptanceCriteria": "Synthesized stack maps POST /uploads, POST /pages, POST /shares, GET /shares/{code}, GET /health to Lambda handlers from @aya/api. The /pages function timeout is between ~16s and 29s with raised memory. Lambdas have least-privilege IAM to the table and bucket. ANTHROPIC_API_KEY, AYA_OCR_MODEL, AYA_ANALYSIS_MODEL, LANGCHAIN_* are passed via env (from SST secrets/config, not literals). Infra typechecks/synthesizes and `sst dev` can be invoked.",
+    "category": "backend"
+  },
+  {
+    "taskId": "infra-web-hosting",
+    "description": "Add the Next.js web reader hosting to the SST app (SSR for /s/{code}) and wire the API base URL into the web app's environment and the WEB_BASE_URL used by the short-URL service.",
+    "status": "todo",
+    "dependencies": [
+      "infra-api-gateway-lambda",
+      "web-package-scaffold"
+    ],
+    "acceptanceCriteria": "Synthesized stack deploys the Next.js app with SSR enabled. The web app receives the API base URL via env; the API receives WEB_BASE_URL via env so minted share URLs point at the deployed web host. Infra typechecks/synthesizes.",
+    "category": "backend"
+  },
+  {
+    "taskId": "web-package-scaffold",
+    "description": "Create the packages/web Next.js app depending only on @aya/shared, with TypeScript strict, build/dev/lint/typecheck scripts, and a typed API client that calls GET /shares/{code} using the shared response schema.",
+    "status": "todo",
+    "dependencies": [
+      "shared-api-contracts"
+    ],
+    "acceptanceCriteria": "`packages/web` is a Next.js app named @aya/web depending on @aya/shared (and NOT on @aya/api or @aya/llm). It builds and typechecks. A typed API client function fetchSharedPage(code) returns a validated AnalyzedPage and throws a typed error on 404 share_not_found. Lint forbids importing @aya/api / @aya/llm.",
+    "category": "web-ui"
+  },
+  {
+    "taskId": "web-share-page-ssr",
+    "description": "Implement the /s/{code} Next.js route that server-side fetches the shared page via the API client and passes the AnalyzedPage to the reader, rendering a clear not-found state when the code is unknown.",
+    "status": "todo",
+    "dependencies": [
+      "web-package-scaffold",
+      "web-reader-component"
+    ],
+    "acceptanceCriteria": "Visiting /s/{validCode} server-renders the reader populated with the page text. Visiting /s/{unknownCode} renders a friendly not-found page (not a stack trace). The page does its fetch server-side. Test (e.g. with a mocked client) asserts both render paths.",
+    "category": "web-ui"
+  },
+  {
+    "taskId": "web-reader-component",
+    "description": "Build the web reader component that renders an AnalyzedPage as clean scrollable text: each phrase with non-null pinyin is an interactive element; punctuation/whitespace tokens (null analysis) render as plain non-interactive text; line breaks from fullText are preserved.",
+    "status": "todo",
+    "dependencies": [
+      "web-package-scaffold"
+    ],
+    "acceptanceCriteria": "Given an AnalyzedPage, the component renders phrases in index order reproducing fullText visually including line breaks. Tokens with pinyin !== null are focusable/interactive; tokens with null analysis are plain text and not interactive. No raw image is shown. Renders without layout jank for a long (100+ phrase) page. Component test asserts interactive vs non-interactive rendering.",
+    "category": "web-ui"
+  },
+  {
+    "taskId": "web-phrase-popup",
+    "description": "Implement the hover-triggered phrase popup for the web reader showing pinyin, contextual translation, and contextual meaning for the hovered phrase, dismissed on mouse-out/escape, using only data already present in the AnalyzedPage (no network call on hover).",
+    "status": "todo",
+    "dependencies": [
+      "web-reader-component"
+    ],
+    "acceptanceCriteria": "Hovering an interactive phrase shows a popup with its pinyin, translation, and contextualMeaning; no network request is made on hover. The popup dismisses on mouse-out and on Escape. Non-interactive tokens never trigger a popup. Component test simulates hover and asserts popup contents and dismissal.",
+    "category": "web-ui"
+  },
+  {
+    "taskId": "mobile-package-scaffold",
+    "description": "Create/initialise the packages/mobile React Native app depending only on @aya/shared, with TypeScript strict and a typed API client for POST /uploads, PUT to S3, POST /pages, and POST /shares using shared schemas.",
+    "status": "todo",
+    "dependencies": [
+      "shared-api-contracts"
+    ],
+    "acceptanceCriteria": "`packages/mobile` is a React Native app named @aya/mobile depending on @aya/shared (NOT @aya/api/@aya/llm). It typechecks. The API client exposes requestUpload(), uploadImage(uploadUrl, bytes), scanPage(imageKey) -> AnalyzedPage, and sharePage(page, phrases) -> {code,url}, each validating with shared schemas. Lint forbids importing @aya/api / @aya/llm.",
+    "category": "mobile"
+  },
+  {
+    "taskId": "mobile-camera-capture",
+    "description": "Implement the camera capture screen: present a camera view, capture a page photo, show a preview with confirm/retake before submission.",
+    "status": "todo",
+    "dependencies": [
+      "mobile-package-scaffold"
+    ],
+    "acceptanceCriteria": "App opens to (or navigates to) a camera view. Capturing a photo shows a preview screen. The user can Retake (returns to camera) or Confirm (proceeds to submission). Matches PRD Story 1 capture/preview/retake criteria. Verified by a component/interaction test or documented manual test steps.",
+    "category": "mobile"
+  },
+  {
+    "taskId": "mobile-scan-flow",
+    "description": "Implement the scan submission flow: on confirm, request a presigned upload, PUT the image to S3, then POST /pages; show a non-blocking loading state during the ~15s processing and store the returned AnalyzedPage in the local-first store.",
+    "status": "todo",
+    "dependencies": [
+      "mobile-camera-capture",
+      "mobile-local-store"
+    ],
+    "acceptanceCriteria": "Confirming a photo triggers upload -> scan and displays an animated loading state without freezing the UI. On success the AnalyzedPage is saved locally and the reader opens. The flow makes exactly one POST /pages call. Verified via mocked API client test covering the happy path.",
+    "category": "mobile"
+  },
+  {
+    "taskId": "mobile-error-states",
+    "description": "Implement mobile error handling for the scan path mapping API error codes to PRD copy with retry/retake CTAs: image_unreadable -> 'Photo unclear, please retake'; no_chinese_text -> 'No Chinese text found, please try again'; network failure -> retry; analysis_failed -> offer retry.",
+    "status": "todo",
+    "dependencies": [
+      "mobile-scan-flow"
+    ],
+    "acceptanceCriteria": "Each error code surfaces the correct inline message and CTA: unreadable/no-text route back to retake; network failure offers retry of upload+scan; analysis_failed offers retry. Errors are shown inline (not crashes). Test with a mocked client asserts each code maps to the right message and CTA.",
+    "category": "mobile"
+  },
+  {
+    "taskId": "mobile-local-store",
+    "description": "Implement the mobile local-first store for scanned pages (persisting AnalyzedPage on device) with save and load operations. Internal store choice is owned here; expose a small typed interface.",
+    "status": "todo",
+    "dependencies": [
+      "mobile-package-scaffold"
+    ],
+    "acceptanceCriteria": "A typed store exposes savePage(AnalyzedPage) and getPage(id)/listPages(). A saved page survives an app reload (persisted, not in-memory only). No image bytes are retained after submission. Test asserts save/load round-trip preserves the reconstruction invariant.",
+    "category": "mobile"
+  },
+  {
+    "taskId": "mobile-reader-view",
+    "description": "Build the mobile reader view rendering an AnalyzedPage as clean, scrollable, legible text with each pinyin-bearing phrase tappable and punctuation/whitespace rendered as plain non-tappable text, preserving line breaks.",
+    "status": "todo",
+    "dependencies": [
+      "mobile-local-store"
+    ],
+    "acceptanceCriteria": "Reader renders phrases in index order reproducing fullText including line breaks, with mobile-legible sizing. Phrases with pinyin !== null are tappable; null-analysis tokens are plain text. Long pages scroll smoothly. Matches PRD Story 2. Verified via component test for tappable vs plain tokens.",
+    "category": "mobile"
+  },
+  {
+    "taskId": "mobile-phrase-popup",
+    "description": "Implement the tap-triggered phrase popup/bottom sheet on mobile showing pinyin, contextual translation, and contextual meaning, dismissible by tapping outside, swiping down, or a close button, using only locally stored analysis (instant, no network).",
+    "status": "todo",
+    "dependencies": [
+      "mobile-reader-view"
+    ],
+    "acceptanceCriteria": "Tapping an interactive phrase opens a bottom sheet showing pinyin, translation, and contextualMeaning instantly with no network call. Dismiss works via tap-outside, swipe-down, and close button. Non-tappable tokens do nothing on tap. Matches PRD Story 3 (MVP fields per ADR-0003). Verified via interaction test.",
+    "category": "mobile"
+  },
+  {
+    "taskId": "mobile-share-flow",
+    "description": "Implement the mobile share action: POST /shares with the locally stored page + phrases, receive the short URL, and present it to the user (copy/share sheet).",
+    "status": "todo",
+    "dependencies": [
+      "mobile-reader-view",
+      "mobile-scan-flow"
+    ],
+    "acceptanceCriteria": "From a stored page the user can tap Share, which calls POST /shares with the full page+phrases and shows the returned short URL via the native share sheet/copy. A failed share surfaces an inline error with retry. Test with mocked client asserts the request body equals the stored AnalyzedPage and the URL is displayed.",
+    "category": "mobile"
+  },
+  {
+    "taskId": "evals-package-scaffold",
+    "description": "Create the packages/evals workspace package depending on @aya/llm, with a datasets/ directory, an eval runner entrypoint, LangSmith dataset wiring, and an `npm run eval` script as referenced in the docs.",
+    "status": "todo",
+    "dependencies": [
+      "llm-run-ocr",
+      "llm-analyze-text"
+    ],
+    "acceptanceCriteria": "`packages/evals` named @aya/evals depends on @aya/llm and uses the same runOcr/analyzeText as production. `npm run eval -w packages/evals` executes the runner. A datasets/ directory holds versioned fixtures. The runner can register/load LangSmith datasets (or run locally when LangSmith env is absent).",
+    "category": "functional"
+  },
+  {
+    "taskId": "evals-seed-datasets",
+    "description": "Add small-but-real seed eval datasets to packages/evals/datasets: an OCR set (book-page images with gold fullText, including a blurry and a no-Chinese case), a segmentation/analysis set (passages with gold phrase boundaries + expected pinyin, emphasising 成语/compounds/proper nouns), and a translation set (context-dependent phrases with rubric reference notes).",
+    "status": "todo",
+    "dependencies": [
+      "evals-package-scaffold"
+    ],
+    "acceptanceCriteria": "datasets/ contains versioned fixtures for the three sets. OCR set includes at least one blurry/unreadable and one no-Chinese-text example with expected statuses. Segmentation set includes at least one four-character idiom expected to stay whole. Each example has the gold fields the corresponding scorer needs. Fixtures load without error in the runner.",
+    "category": "functional"
+  },
+  {
+    "taskId": "evals-scorer-cer",
+    "description": "Implement the OCR Character Error Rate scorer in packages/evals: normalised edit distance between predicted and gold fullText, reporting character accuracy against the ≥95% target.",
+    "status": "todo",
+    "dependencies": [
+      "evals-seed-datasets"
+    ],
+    "acceptanceCriteria": "scoreCER(pred, gold) returns CER and derived accuracy in [0,1]. Identical strings score accuracy 1.0; known small diffs produce the expected CER. A summary flags examples below 95% accuracy. Unit tests cover identical, single-edit, and empty-string cases.",
+    "category": "functional"
+  },
+  {
+    "taskId": "evals-scorer-segmentation",
+    "description": "Implement the segmentation scorer in packages/evals: phrase-boundary precision/recall/F1 versus gold boundaries plus an explicit idiom-split counter that must stay at zero.",
+    "status": "todo",
+    "dependencies": [
+      "evals-seed-datasets"
+    ],
+    "acceptanceCriteria": "scoreSegmentation(predTokens, goldBoundaries) returns precision, recall, F1, and an idiomSplitCount. A perfect match yields F1 1.0 and idiomSplitCount 0. A token that splits a gold idiom increments idiomSplitCount and is treated as a hard failure in the summary. Unit tests cover perfect, off-by-one boundary, and idiom-split cases.",
+    "category": "functional"
+  },
+  {
+    "taskId": "evals-scorer-pinyin",
+    "description": "Implement the deterministic pinyin scorer in packages/evals comparing model pinyin to a pinyin library's output for the same characters, with a known-polyphone exception list, reporting a mismatch rate.",
+    "status": "todo",
+    "dependencies": [
+      "evals-seed-datasets"
+    ],
+    "acceptanceCriteria": "scorePinyin(token) compares predicted pinyin to a library reference and reports match/mismatch; polyphone exceptions are not counted as mismatches. A summary reports mismatch rate, targeting near-100% on common vocabulary. Unit tests cover an exact match, a clear mismatch, and a polyphone exception.",
+    "category": "functional"
+  },
+  {
+    "taskId": "evals-scorer-translation-judge",
+    "description": "Implement the LLM-as-judge translation scorer in packages/evals: a fixed rubric (faithfulness, contextual correctness, fluency) scored at temperature 0 with a config-driven judge model id, returning per-dimension scores against a threshold.",
+    "status": "todo",
+    "dependencies": [
+      "evals-seed-datasets"
+    ],
+    "acceptanceCriteria": "scoreTranslation(phrase, context, referenceNotes) returns numeric scores for faithfulness, contextual correctness, and fluency on a fixed scale and a pass/fail vs threshold. The judge model id comes from env/config (not hard-coded) and runs at temperature 0. With a mocked judge, tests assert rubric parsing and threshold logic.",
+    "category": "functional"
+  },
+  {
+    "taskId": "evals-reconstruction-and-report",
+    "description": "Add the reconstruction-invariant check to every analysis eval example (automatic fail on violation independent of quality scores) and implement the aggregate eval report (CER, boundary F1, idiom-split count, pinyin mismatch rate, judge score distribution, reconstruction pass rate) compared against a stored baseline, exiting non-zero on regression beyond tolerance.",
+    "status": "todo",
+    "dependencies": [
+      "evals-scorer-cer",
+      "evals-scorer-segmentation",
+      "evals-scorer-pinyin",
+      "evals-scorer-translation-judge",
+      "shared-reconstruction-invariant"
+    ],
+    "acceptanceCriteria": "Running the suite produces a summary report with all six metrics and a per-example reconstruction pass/fail; any reconstruction failure marks the example failed regardless of quality scores. The runner compares against a baseline and exits non-zero when a metric regresses beyond the configured tolerance or falls below threshold, and exits zero otherwise. Verified with a fixture run.",
+    "category": "functional"
+  },
+  {
+    "taskId": "ci-core-pipeline",
+    "description": "Add a CI workflow that runs turbo typecheck, lint, and build across all packages on every PR, leveraging Turborepo caching.",
+    "status": "todo",
+    "dependencies": [
+      "api-router",
+      "web-package-scaffold",
+      "mobile-package-scaffold"
+    ],
+    "acceptanceCriteria": "A CI config runs `npm ci`, `npm run typecheck`, `npm run lint`, and `npm run build` and fails the build if any step fails. The shared-types contract is enforced (a breaking change in @aya/shared fails typecheck in dependents). Turbo caching is enabled.",
+    "category": "backend"
+  },
+  {
+    "taskId": "ci-evals-gate",
+    "description": "Add the CI eval gate that runs `npm run eval -w packages/evals` on any PR touching packages/llm (prompts, schemas, model config) and fails the build on score-below-threshold or regression beyond tolerance versus the baseline.",
+    "status": "todo",
+    "dependencies": [
+      "evals-reconstruction-and-report",
+      "ci-core-pipeline"
+    ],
+    "acceptanceCriteria": "The CI job is triggered (path filter) when files under packages/llm change and runs the eval suite. A simulated regression (metric below threshold) fails the job; a passing run succeeds. This enforces the 'no prompt/chain/model change without an eval run' golden rule. Documented in the repo so contributors know the gate exists.",
+    "category": "functional"
+  }
+]

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.next/
+.turbo/
+
+# Hand-authored docs, plan data, and tooling — formatted by their owners, not Prettier.
+specs/
+.claude/
+*.md
+implementation_plan.json
