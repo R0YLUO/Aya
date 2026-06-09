@@ -318,7 +318,7 @@
   {
     "taskId": "web-share-page-ssr",
     "description": "Implement the /s/{code} Next.js route that server-side fetches the shared page via the API client and passes the AnalyzedPage to the reader, rendering a clear not-found state when the code is unknown.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "web-package-scaffold",
       "web-reader-component"
