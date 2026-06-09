@@ -11,3 +11,8 @@ export {
   ShareSchema,
   AnalyzedPageSchema,
 } from './schemas.js';
+export { checkReconstruction } from './reconstruction.js';
+export type {
+  ReconstructionResult,
+  ReconstructionFailureReason,
+} from './reconstruction.js';

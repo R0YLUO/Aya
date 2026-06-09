@@ -40,7 +40,7 @@
   {
     "taskId": "shared-reconstruction-invariant",
     "description": "Implement and export a reusable invariant helper in packages/shared that checks the reconstruction rule: phrases sorted by index, concatenating each phrase.original equals a given fullText, indexes are unique and contiguous from 1, and all phrases share the same pageId.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "shared-zod-domain-schemas"
     ],
