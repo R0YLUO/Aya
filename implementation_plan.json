@@ -70,7 +70,7 @@
   {
     "taskId": "llm-model-config",
     "description": "Implement packages/llm config module that reads model id, temperature, and maxTokens for the ocr and analysis stages from environment variables (AYA_OCR_MODEL, AYA_ANALYSIS_MODEL, ANTHROPIC_API_KEY), with temperature 0 for both stages. Model ids must come from env, never hard-coded literals.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "llm-package-scaffold"
     ],

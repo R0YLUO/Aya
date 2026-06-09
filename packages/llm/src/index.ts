@@ -9,6 +9,13 @@
 
 import type { Phrase } from '@aya/shared';
 
+export {
+  loadLlmConfig,
+  OCR_MAX_TOKENS,
+  ANALYSIS_MAX_TOKENS,
+} from './config.js';
+export type { LlmConfig, StageConfig, Env } from './config.js';
+
 /** Image input accepted by {@link runOcr}: raw bytes or an S3/HTTP(S) URL. */
 export type OcrImageInput =
   | { kind: 'bytes'; data: Uint8Array; mediaType: string }
