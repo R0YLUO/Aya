@@ -143,7 +143,7 @@
   {
     "taskId": "api-error-envelope",
     "description": "Implement an error helper layer in packages/api that maps domain/LLM errors to the consistent HTTP error envelope and status codes from the API doc (400 validation_error, 404 image_not_found/share_not_found, 422 image_unreadable/no_chinese_text, 502 analysis_failed, 500 unexpected).",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "api-package-scaffold"
     ],

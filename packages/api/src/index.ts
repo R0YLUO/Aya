@@ -10,4 +10,15 @@
 // package depends only on @aya/shared (and, once the scan handler lands, @aya/llm)
 // — never the other way around.
 
-export {};
+export {
+  ApiError,
+  INTERNAL_ERROR_CODE,
+  toErrorResponse,
+  validationError,
+  imageNotFound,
+  shareNotFound,
+  imageUnreadable,
+  noChineseText,
+  analysisFailed,
+} from './errors.js';
+export type { ErrorDetails, ErrorResponse } from './errors.js';
