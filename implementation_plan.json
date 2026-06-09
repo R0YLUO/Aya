@@ -174,7 +174,7 @@
   {
     "taskId": "api-short-url-service",
     "description": "Implement the short-URL service in packages/api that mints an unguessable URL-safe code (e.g. 8-char base62/nanoid) for a share and composes the public URL from a configured web base URL.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "api-package-scaffold"
     ],

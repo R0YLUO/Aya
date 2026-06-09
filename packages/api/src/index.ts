@@ -35,3 +35,9 @@ export type {
   Presigner,
   S3PresignServiceOptions,
 } from './services/s3-presign-service.js';
+
+export {
+  ShortUrlService,
+  generateShareCode,
+  SHARE_CODE_LENGTH,
+} from './services/short-url-service.js';
