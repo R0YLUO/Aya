@@ -50,7 +50,7 @@
   {
     "taskId": "shared-api-contracts",
     "description": "Define Zod request/response schemas for every REST endpoint in packages/shared: POST /uploads, POST /pages, POST /shares, GET /shares/{code}, GET /health, plus the standard error envelope and the machine-readable error code enum.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "shared-zod-domain-schemas"
     ],

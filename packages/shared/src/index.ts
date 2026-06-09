@@ -16,3 +16,29 @@ export type {
   ReconstructionResult,
   ReconstructionFailureReason,
 } from './reconstruction.js';
+
+export {
+  ERROR_CODES,
+  ErrorCodeSchema,
+  ErrorEnvelopeSchema,
+  UploadRequestSchema,
+  UploadResponseSchema,
+  ScanRequestSchema,
+  ScanResponseSchema,
+  ShareRequestSchema,
+  ShareResponseSchema,
+  ShareResolveResponseSchema,
+  HealthResponseSchema,
+} from './api.js';
+export type {
+  ErrorCode,
+  ErrorEnvelope,
+  UploadRequest,
+  UploadResponse,
+  ScanRequest,
+  ScanResponse,
+  ShareRequest,
+  ShareResponse,
+  ShareResolveResponse,
+  HealthResponse,
+} from './api.js';
