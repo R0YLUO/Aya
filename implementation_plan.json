@@ -80,7 +80,7 @@
   {
     "taskId": "llm-langsmith-wiring",
     "description": "Wire LangSmith tracing for all LLM calls via environment (LANGCHAIN_TRACING_V2, LANGCHAIN_API_KEY, LANGCHAIN_PROJECT) and provide a helper to attach run tags/metadata (stage, pageId, model, env) to each invocation without changes at call sites.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "llm-model-config"
     ],

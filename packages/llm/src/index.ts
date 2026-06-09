@@ -16,6 +16,13 @@ export {
 } from './config.js';
 export type { LlmConfig, StageConfig, Env } from './config.js';
 
+export {
+  buildRunConfig,
+  buildRunMetadata,
+  isTracingEnabled,
+} from './tracing.js';
+export type { Stage, RunTagInput, RunMetadata } from './tracing.js';
+
 /** Image input accepted by {@link runOcr}: raw bytes or an S3/HTTP(S) URL. */
 export type OcrImageInput =
   | { kind: 'bytes'; data: Uint8Array; mediaType: string }
