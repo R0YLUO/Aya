@@ -329,7 +329,7 @@
   {
     "taskId": "web-reader-component",
     "description": "Build the web reader component that renders an AnalyzedPage as clean scrollable text: each phrase with non-null pinyin is an interactive element; punctuation/whitespace tokens (null analysis) render as plain non-interactive text; line breaks from fullText are preserved.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "web-package-scaffold"
     ],
