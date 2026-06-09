@@ -22,3 +22,12 @@ export {
   type CaptureState,
   type CaptureAction,
 } from './camera/index.js';
+
+export {
+  LocalPageStore,
+  createAsyncStorageBackend,
+  createInMemoryBackend,
+  type PageStore,
+  type StorageBackend,
+  type AsyncStorageLike,
+} from './store/index.js';

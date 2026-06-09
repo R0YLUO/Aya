@@ -390,7 +390,7 @@
   {
     "taskId": "mobile-local-store",
     "description": "Implement the mobile local-first store for scanned pages (persisting AnalyzedPage on device) with save and load operations. Internal store choice is owned here; expose a small typed interface.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "mobile-package-scaffold"
     ],
