@@ -308,7 +308,7 @@
   {
     "taskId": "web-package-scaffold",
     "description": "Create the packages/web Next.js app depending only on @aya/shared, with TypeScript strict, build/dev/lint/typecheck scripts, and a typed API client that calls GET /shares/{code} using the shared response schema.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "shared-api-contracts"
     ],
