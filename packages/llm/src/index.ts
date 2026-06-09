@@ -3,12 +3,8 @@
 // The rest of the system interacts with the model only through `runOcr` and
 // `analyzeText` — it never imports LangChain or knows which model is in use
 // (North Star: Extensible; specs/04-llm-pipeline.md).
-//
-// Stubs at this scaffold step throw "not implemented"; they are replaced by the
-// real chains in the llm-run-ocr / llm-analyze-text tasks.
 
 import type { Phrase } from '@aya/shared';
-import type { OcrResult } from './ocr.js';
 
 export {
   loadLlmConfig,
@@ -25,6 +21,13 @@ export {
 export type { Stage, RunTagInput, RunMetadata } from './tracing.js';
 
 export {
+  createStructuredRunner,
+  withRetry,
+  TransientLlmError,
+} from './model.js';
+export type { StructuredRunner, RetryOptions } from './model.js';
+
+export {
   OcrResultSchema,
   OcrStatusSchema,
   buildOcrSystemPrompt,
@@ -38,20 +41,8 @@ export {
 } from './analysis.js';
 export type { AnalysisResult, PhraseToken } from './analysis.js';
 
-/** Image input accepted by {@link runOcr}: raw bytes or an S3/HTTP(S) URL. */
-export type OcrImageInput =
-  | { kind: 'bytes'; data: Uint8Array; mediaType: string }
-  | { kind: 'url'; url: string };
-
-/**
- * Call ① — OCR. Extracts printed Simplified-Chinese text from an image via a
- * Claude vision model, returning a validated {@link OcrResult}.
- *
- * Stub until `llm-run-ocr`.
- */
-export function runOcr(_image: OcrImageInput): Promise<OcrResult> {
-  throw new Error('runOcr: not implemented');
-}
+export { runOcr, buildOcrMessages } from './run-ocr.js';
+export type { OcrImageInput, RunOcrOptions } from './run-ocr.js';
 
 /**
  * Call ② — Analysis. Segments and analyses `fullText` into an ordered
