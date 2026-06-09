@@ -1,0 +1,37 @@
+{
+  "name": "@aya/llm",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Aya LLM pipeline: isolated LangChain chains (runOcr, analyzeText), prompts, structured-output schemas, model config, and LangSmith wiring. The only package that knows which model is in use.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "tsc -p tsconfig.test.json && node --test \"dist-test/**/*.test.js\"",
+    "clean": "rm -rf dist dist-test .turbo"
+  },
+  "dependencies": {
+    "@aya/shared": "*",
+    "@langchain/anthropic": "^1.4.0",
+    "@langchain/core": "^1.1.48",
+    "langchain": "^1.4.4",
+    "uuid": "^14.0.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.8.3"
+  }
+}

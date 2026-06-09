@@ -60,7 +60,7 @@
   {
     "taskId": "llm-package-scaffold",
     "description": "Create the packages/llm workspace package depending on @aya/shared, langchain, the Anthropic LangChain integration, and zod. Include tsconfig, build/typecheck/lint/clean scripts, and an index barrel exporting runOcr and analyzeText (initially stubbed).",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "shared-api-contracts"
     ],
