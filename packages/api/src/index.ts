@@ -24,3 +24,14 @@ export {
 export type { ErrorDetails, ErrorResponse } from './errors.js';
 
 export { PageRepository } from './repositories/page-repository.js';
+
+export {
+  S3PresignService,
+  DEFAULT_CONTENT_TYPE,
+  DEFAULT_UPLOAD_EXPIRY_SECONDS,
+} from './services/s3-presign-service.js';
+export type {
+  PresignResult,
+  Presigner,
+  S3PresignServiceOptions,
+} from './services/s3-presign-service.js';

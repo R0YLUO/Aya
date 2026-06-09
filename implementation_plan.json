@@ -164,7 +164,7 @@
   {
     "taskId": "api-s3-presign-service",
     "description": "Implement the S3 presign service in packages/api that generates a presigned PUT URL and a dated object key (uploads/YYYY/MM/DD/<uuid>.jpg) for image uploads, with a short expiry, and a helper to fetch an uploaded object's bytes (or signal not-found) for the scan path.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "api-package-scaffold"
     ],
