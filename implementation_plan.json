@@ -339,7 +339,7 @@
   {
     "taskId": "web-phrase-popup",
     "description": "Implement the hover-triggered phrase popup for the web reader showing pinyin, contextual translation, and contextual meaning for the hovered phrase, dismissed on mouse-out/escape, using only data already present in the AnalyzedPage (no network call on hover).",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "web-reader-component"
     ],

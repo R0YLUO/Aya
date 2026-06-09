@@ -11,8 +11,11 @@
 //   plain, non-interactive text.
 // - No raw image is ever shown — we only render analysed text.
 
-import type { ReactElement, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactElement, ReactNode } from 'react';
 import type { AnalyzedPage, Phrase } from '@aya/shared';
+
+/** The interactive element the Reader produces for a phrase: a focusable button. */
+export type PhraseTrigger = ReactElement<ButtonHTMLAttributes<HTMLButtonElement>>;
 
 /** A phrase is interactive iff it carries analysis (pinyin present). */
 export function isInteractive(phrase: Phrase): boolean {
@@ -26,7 +29,7 @@ export interface ReaderProps {
    * and a ready-made interactive element; callers (e.g. the popup layer) can
    * wrap it. Defaults to rendering the interactive element as-is.
    */
-  renderInteractive?: (phrase: Phrase, element: ReactElement) => ReactNode;
+  renderInteractive?: (phrase: Phrase, element: PhraseTrigger) => ReactNode;
 }
 
 /**
