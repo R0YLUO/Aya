@@ -8,7 +8,13 @@ import prettier from 'eslint-config-prettier';
 export default tseslint.config(
   {
     // Never lint build output or deps.
-    ignores: ['**/dist/**', '**/.next/**', '**/.turbo/**', '**/node_modules/**'],
+    ignores: [
+      '**/dist/**',
+      '**/dist-test/**',
+      '**/.next/**',
+      '**/.turbo/**',
+      '**/node_modules/**',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

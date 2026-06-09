@@ -30,7 +30,7 @@
   {
     "taskId": "shared-zod-domain-schemas",
     "description": "Add Zod schemas for Page, Phrase, Share, and AnalyzedPage in packages/shared, paired one-to-one with the domain interfaces, and ensure z.infer of each schema is assignable to its interface.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "shared-domain-types"
     ],

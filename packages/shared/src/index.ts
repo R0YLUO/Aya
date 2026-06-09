@@ -5,3 +5,9 @@
 // are re-exported here — see specs/02-data-model.md and specs/03-api-design.md.
 
 export type { Page, Phrase, Share, AnalyzedPage } from './domain.js';
+export {
+  PageSchema,
+  PhraseSchema,
+  ShareSchema,
+  AnalyzedPageSchema,
+} from './schemas.js';

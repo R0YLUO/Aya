@@ -20,6 +20,11 @@
       "dependsOn": ["^build"],
       "inputs": ["src/**", "tsconfig.json"]
     },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "tsconfig.json", "tsconfig.test.json", "package.json"],
+      "outputs": ["dist-test/**"]
+    },
     "clean": {
       "cache": false
     }
