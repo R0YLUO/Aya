@@ -44,3 +44,4 @@ export {
 
 export type { Handler, HandlerRequest, HandlerResult } from './handlers/types.js';
 export { healthHandler } from './handlers/health.js';
+export { makeUploadsHandler } from './handlers/uploads.js';

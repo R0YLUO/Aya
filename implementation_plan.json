@@ -194,7 +194,7 @@
   {
     "taskId": "api-handler-uploads",
     "description": "Implement the POST /uploads Lambda handler: validate the optional request body with the shared schema, call the presign service, and return UploadResponse.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "api-s3-presign-service",
       "api-error-envelope"
