@@ -41,3 +41,6 @@ export {
   generateShareCode,
   SHARE_CODE_LENGTH,
 } from './services/short-url-service.js';
+
+export type { Handler, HandlerRequest, HandlerResult } from './handlers/types.js';
+export { healthHandler } from './handlers/health.js';

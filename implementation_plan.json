@@ -184,7 +184,7 @@
   {
     "taskId": "api-handler-health",
     "description": "Implement the GET /health Lambda handler returning { status: 'ok', version } validated against the shared HealthResponse schema.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "api-error-envelope"
     ],
