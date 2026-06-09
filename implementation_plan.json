@@ -359,7 +359,7 @@
   {
     "taskId": "mobile-camera-capture",
     "description": "Implement the camera capture screen: present a camera view, capture a page photo, show a preview with confirm/retake before submission.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "mobile-package-scaffold"
     ],

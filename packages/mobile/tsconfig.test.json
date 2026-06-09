@@ -23,6 +23,8 @@
     "src/scan/**/*.ts",
     "src/share/**/*.ts",
     "src/errors/**/*.ts",
+    "src/camera/types.ts",
+    "src/reader/tokens.ts",
     "src/test-support/**/*.ts"
   ],
   "exclude": ["dist", "dist-test", "node_modules", "src/**/*.tsx"]

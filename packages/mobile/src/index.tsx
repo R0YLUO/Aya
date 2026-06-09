@@ -11,3 +11,14 @@ export {
   type FetchLike,
   type FetchResponse,
 } from './api/index.js';
+
+export {
+  CameraCaptureScreen,
+  captureReducer,
+  initialCaptureState,
+  type CameraCaptureScreenProps,
+  type CameraService,
+  type CapturedPhoto,
+  type CaptureState,
+  type CaptureAction,
+} from './camera/index.js';
