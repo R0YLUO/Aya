@@ -60,7 +60,7 @@
   {
     "taskId": "llm-package-scaffold",
     "description": "Create the packages/llm workspace package depending on @aya/shared, langchain, the Anthropic LangChain integration, and zod. Include tsconfig, build/typecheck/lint/clean scripts, and an index barrel exporting runOcr and analyzeText (initially stubbed).",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "shared-api-contracts"
     ],
@@ -70,7 +70,7 @@
   {
     "taskId": "llm-model-config",
     "description": "Implement packages/llm config module that reads model id, temperature, and maxTokens for the ocr and analysis stages from environment variables (AYA_OCR_MODEL, AYA_ANALYSIS_MODEL, ANTHROPIC_API_KEY), with temperature 0 for both stages. Model ids must come from env, never hard-coded literals.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "llm-package-scaffold"
     ],
@@ -80,7 +80,7 @@
   {
     "taskId": "llm-langsmith-wiring",
     "description": "Wire LangSmith tracing for all LLM calls via environment (LANGCHAIN_TRACING_V2, LANGCHAIN_API_KEY, LANGCHAIN_PROJECT) and provide a helper to attach run tags/metadata (stage, pageId, model, env) to each invocation without changes at call sites.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "llm-model-config"
     ],
@@ -90,7 +90,7 @@
   {
     "taskId": "llm-ocr-schema-and-prompt",
     "description": "Define the OCR structured-output Zod schema (OcrResult { status: ok|unreadable|no_chinese_text, fullText }) and the OCR prompt template in packages/llm, encoding the prompt intent from the LLM pipeline doc (transcribe Simplified Chinese exactly, preserve line breaks/punctuation, no translation, signal the two failure modes).",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "llm-model-config"
     ],
@@ -100,7 +100,7 @@
   {
     "taskId": "llm-run-ocr",
     "description": "Implement runOcr(imageBytesOrUrl) in packages/llm: build a Claude vision message with the image, invoke with structured output bound to OcrResult, return the validated result. Include bounded retries with backoff for transient model/network errors.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "llm-ocr-schema-and-prompt",
       "llm-langsmith-wiring"
@@ -111,7 +111,7 @@
   {
     "taskId": "llm-analysis-schema-and-prompt",
     "description": "Define the analysis structured-output Zod schema (AnalysisResult { tokens: PhraseToken[] } with PhraseToken { index, original, pinyin|null, translation|null, contextualMeaning|null }) and the analysis prompt encoding the pipeline doc intent (segment into meaningful phrases, keep idioms/compounds/proper nouns whole, contextual meaning, null analysis for punctuation/whitespace, exact reconstruction).",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "llm-model-config"
     ],
