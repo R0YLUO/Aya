@@ -349,7 +349,7 @@
   {
     "taskId": "mobile-package-scaffold",
     "description": "Create/initialise the packages/mobile React Native app depending only on @aya/shared, with TypeScript strict and a typed API client for POST /uploads, PUT to S3, POST /pages, and POST /shares using shared schemas.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "shared-api-contracts"
     ],
@@ -359,7 +359,7 @@
   {
     "taskId": "mobile-camera-capture",
     "description": "Implement the camera capture screen: present a camera view, capture a page photo, show a preview with confirm/retake before submission.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "mobile-package-scaffold"
     ],
@@ -369,7 +369,7 @@
   {
     "taskId": "mobile-scan-flow",
     "description": "Implement the scan submission flow: on confirm, request a presigned upload, PUT the image to S3, then POST /pages; show a non-blocking loading state during the ~15s processing and store the returned AnalyzedPage in the local-first store.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "mobile-camera-capture",
       "mobile-local-store"
@@ -390,7 +390,7 @@
   {
     "taskId": "mobile-local-store",
     "description": "Implement the mobile local-first store for scanned pages (persisting AnalyzedPage on device) with save and load operations. Internal store choice is owned here; expose a small typed interface.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "mobile-package-scaffold"
     ],

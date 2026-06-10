@@ -7,3 +7,6 @@ dist-test/
 .env
 .env.local
 .env.*.local
+
+# git worktrees created by parallel agents
+.claude/worktrees/
