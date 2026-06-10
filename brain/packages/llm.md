@@ -2,8 +2,8 @@
 title: "@aya/llm"
 type: package
 packages: [llm]
-tasks: [llm-package-scaffold, llm-model-config, llm-langsmith-wiring, llm-ocr-schema-and-prompt, llm-run-ocr, llm-analysis-schema-and-prompt]
-summary: The two LLM calls (runOcr built, analyzeText still a stub), structured-output runner, retry helper, LangSmith tagging, env-sourced model config.
+tasks: [llm-package-scaffold, llm-model-config, llm-langsmith-wiring, llm-ocr-schema-and-prompt, llm-run-ocr, llm-analysis-schema-and-prompt, llm-analyze-text]
+summary: The two LLM calls (runOcr and analyzeText both built), structured-output runner, retry helper, LangSmith tagging, env-sourced model config.
 updated: 2026-06-10
 ---
 
@@ -16,10 +16,7 @@ past this package.
 ## Status
 
 - **`runOcr` is implemented** (`src/run-ocr.ts`).
-- **`analyzeText` is a stub that throws** — it lives *in the barrel* (`src/index.ts`),
-  not its own file yet. Task `llm-analyze-text` (todo) implements it; whoever does
-  should follow the runOcr shape and the patterns in
-  [structured-llm-output](../concepts/structured-llm-output.md).
+- **`analyzeText` is implemented** (`src/analyze-text.ts`). Both LLM calls are done.
 
 ## What lives where
 
@@ -40,12 +37,17 @@ past this package.
 - `src/analysis.ts` — `AnalysisResultSchema` (`tokens: PhraseToken[]`, analysis fields
   nullable) and `buildAnalysisSystemPrompt()` (segmentation rules: idioms/compounds
   whole, exact reconstruction, 1-based contiguous index).
+- `src/analyze-text.ts` — `analyzeText(fullText, pageId, options)`. Two-phase retry:
+  `withRetry` (maxAttempts 2) for transient/parse errors; outer loop (max 2 iterations)
+  for reconstruction failures with feedback injected into the retry message.
+  Assigns uuid ids and pageId to each token. Throws `AnalysisFailedError` on persistent
+  reconstruction mismatch. Sorted by index before return.
 - `src/tracing.ts` — `buildRunConfig({stage, model, pageId?, env?})` → RunnableConfig
   with `runName: aya-<stage>` plus `stage:/model:/env:/pageId:` tags and mirrored
   metadata. Tracing on/off is purely env (`LANGCHAIN_TRACING_V2`); tags are no-ops
   when off.
 
-## Conventions (follow these in `analyzeText` and any new call)
+## Conventions
 
 - Prompts are **builder functions** returning the literal string, so tweaks are
   diff-tracked and eval-gated. Schema and prompt live together in one file per call.

@@ -2,7 +2,7 @@
 title: Structured LLM output, retries & tracing
 type: concept
 packages: [llm]
-tasks: [llm-run-ocr, llm-model-config, llm-langsmith-wiring]
+tasks: [llm-run-ocr, llm-model-config, llm-langsmith-wiring, llm-analyze-text]
 summary: The StructuredRunner pattern every LLM call follows — Zod-bound runner, injectable for tests, bounded retries, defensive re-parse, tagged runs.
 updated: 2026-06-10
 ---
@@ -41,6 +41,8 @@ caller maps both to [error envelopes](./error-handling.md).
 
 - `temperature` is config'd as 0 but **not sent** to the API by default — see
   [decision](../decisions/temperature-param-omitted.md).
-- `TransientLlmError` is defined but currently unused by `runOcr`; `withRetry`
-  retries all errors by default. If `analyzeText` needs retry-on-reconstruction-failure
-  semantics, decide whether to distinguish retryable errors and record it.
+- `TransientLlmError` is defined but unused — `withRetry` retries all errors by
+  default. Neither `runOcr` nor `analyzeText` wraps errors in it.
+- `analyzeText` uses `maxAttempts: 2` (not the `withRetry` default of 3) for the inner
+  transient/parse retry, reserving a second outer attempt for reconstruction failures.
+  The two retry axes (parse vs. reconstruction) are deliberately independent.

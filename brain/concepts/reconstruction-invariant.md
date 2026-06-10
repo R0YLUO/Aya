@@ -2,7 +2,7 @@
 title: Reconstruction invariant
 type: concept
 packages: [shared, llm, api, web]
-tasks: [shared-reconstruction-invariant, llm-analysis-schema-and-prompt]
+tasks: [shared-reconstruction-invariant, llm-analysis-schema-and-prompt, llm-analyze-text]
 summary: phrases.join('') === fullText, indexes unique & contiguous from 1 — who checks it, who relies on it, and where it is enforced (and not yet).
 updated: 2026-06-10
 ---
@@ -25,7 +25,7 @@ Pure; returns `{ ok: true }` or `{ ok: false, reason }` with reasons `empty`,
 
 | Point | Status |
 |---|---|
-| `analyzeText` output (llm) | **Pending** — `llm-analyze-text` must check before returning (likely retry/fail with `analysis_failed` semantics) |
+| `analyzeText` output (llm) | **Done** — `analyzeText` checks, retries once with feedback, then throws `AnalysisFailedError` on persistent failure |
 | `POST /pages` response (api) | Pending — `api-handler-pages` |
 | `POST /shares` before persisting (api) | Pending — `api-handler-shares-create`; the repository deliberately does NOT check (its doc says callers must) |
 | Evals | Pending — `evals-reconstruction-and-report` scores it across datasets |

@@ -121,7 +121,7 @@
   {
     "taskId": "llm-analyze-text",
     "description": "Implement analyzeText(fullText, pageId) in packages/llm: invoke Claude with structured output bound to AnalysisResult, run the reconstruction check (tokens.join('') === fullText); on failure retry once feeding back the discrepancy, then fail; on success assign uuid id and pageId to each token producing a validated Phrase[].",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "llm-analysis-schema-and-prompt",
       "llm-langsmith-wiring",
@@ -400,7 +400,7 @@
   {
     "taskId": "mobile-reader-view",
     "description": "Build the mobile reader view rendering an AnalyzedPage as clean, scrollable, legible text with each pinyin-bearing phrase tappable and punctuation/whitespace rendered as plain non-tappable text, preserving line breaks.",
-    "status": "todo",
+    "status": "progress",
     "dependencies": [
       "mobile-local-store"
     ],

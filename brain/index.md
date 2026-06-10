@@ -7,7 +7,7 @@
 ## Packages (as-built)
 
 - [@aya/api](./packages/api.md) _(api)_ — Transport-agnostic handlers (health, uploads built; pages/shares/router todo), ApiError→envelope mapping, DynamoDB repository, S3 presign, short-URL service.
-- [@aya/llm](./packages/llm.md) _(llm)_ — The two LLM calls (runOcr built, analyzeText still a stub), structured-output runner, retry helper, LangSmith tagging, env-sourced model config.
+- [@aya/llm](./packages/llm.md) _(llm)_ — The two LLM calls (runOcr and analyzeText both built), structured-output runner, retry helper, LangSmith tagging, env-sourced model config.
 - [@aya/mobile](./packages/mobile.md) _(mobile)_ — RN app — typed API client, camera/scan state machines, local-first page store. Reader view in progress; error-states, phrase popup, share flow todo.
 - [@aya/shared](./packages/shared.md) _(shared)_ — Domain types, Zod contracts, error codes, and the reconstruction check — the single source every package imports from.
 - [@aya/web](./packages/web.md) _(web)_ — Next.js share reader — /s/{code} SSR route, typed share client, Reader with render-prop popups. All four planned web tasks are done.
@@ -30,4 +30,5 @@
 
 ## Log (newest first)
 
+- [llm-analyze-text: analyzeText implemented](./log/2026-06-10--llm-analyze-text.md) _(llm)_ — Implemented analyzeText in src/analyze-text.ts with two-phase retry, reconstruction enforcement, and AnalysisFailedError.
 - [Bootstrap — brain created, 27 done tasks backfilled](./log/2026-06-10--bootstrap-backfill.md) _(shared, llm, api, web, mobile)_ — Created the brain (schema, index builder) and backfilled as-built knowledge from all 27 completed plan tasks.
