@@ -111,6 +111,11 @@ Node >= 22, npm 10.9.x (see root `package.json`).
     After completing work, update the affected brain pages, add a `brain/log/` entry, regenerate
     the index, and include those changes **in the same commit** as the code — workflows in
     [`brain/README.md`](./brain/README.md).
+11. **Surface what needs a human.** If finishing work leaves end-to-end verification (or any
+    setup step) pending something only the human can provide — API keys, accounts, devices,
+    deployments — record it as a `brain/handoffs/` entry (`status: open`). The
+    `project-manager` skill reports these; never let "done with mocks" silently pass as
+    "verified".
 
 ## Out of scope (don't build unless the PRD changes)
 

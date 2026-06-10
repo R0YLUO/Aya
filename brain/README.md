@@ -28,6 +28,7 @@ brain/
   packages/      ← one as-built page per workspace package
   concepts/      ← cross-cutting topics (flows, conventions, contracts)
   decisions/     ← implementation-level decisions too small for an ADR in specs/08
+  handoffs/      ← one file per item that needs the human (keys, accounts, manual verification)
   log/           ← one small file per ingest event (chronological record)
   scripts/       ← node-stdlib-only tooling (build-index.mjs)
 ```
@@ -40,13 +41,15 @@ frontmatter:
 ```yaml
 ---
 title: Short page title
-type: package | concept | decision | log
+type: package | concept | decision | handoff | log
 packages: [api, llm]        # workspace packages the page concerns (may be empty)
 tasks: [llm-run-ocr]        # implementation_plan.json taskIds that shaped the page
 summary: One line for the index — write it for an agent deciding whether to open this page.
 updated: 2026-06-10
 ---
 ```
+
+Handoff pages additionally require `status: open | resolved`.
 
 Conventions:
 
@@ -78,6 +81,28 @@ commit**, so the brain in any commit is consistent with the code in that commit:
    what was built, which brain pages were touched, anything surprising).
 5. Regenerate the index: `node brain/scripts/build-index.mjs`.
 6. Commit the brain changes **with the task's code** in the task's single commit.
+
+### Handoffs (the needs-a-human ledger)
+
+A **handoff** records something only the human can do: provide a secret or account
+(API keys, AWS, LangSmith), run something on a real device, make a paid/owned-resource
+decision, or verify behaviour end-to-end where tests could only use mocks.
+
+- **When to write one:** during ingest, whenever a task is marked `done` on the
+  strength of mocked/stubbed verification but its real end-to-end behaviour is still
+  unproven pending a human-supplied resource — or whenever you discover a human
+  prerequisite for upcoming work. "Done" in the plan means *acceptance criteria met*;
+  the handoff is how the remaining gap stays visible instead of silently absorbed.
+- **Format:** `handoffs/<slug>.md`, type `handoff`, `status: open`, with three short
+  sections: **What's needed** (the exact action, copy-pasteable where possible),
+  **Why** (what is unverified/blocked without it), **Verify after** (how an agent
+  confirms it once provided). List the affected `tasks:` in frontmatter.
+- **One file per item** (merge-safe, like `log/`). If a handoff already covers your
+  gap (e.g. "Anthropic API key"), add your taskId to its `tasks:` list and extend the
+  body — don't create a duplicate.
+- **Resolving:** when the human has done the thing (and it's been verified per the
+  page), set `status: resolved`, bump `updated`, and regenerate the index. The
+  `project-manager` skill reports open handoffs and handles resolution.
 
 ### Query (start every task here)
 

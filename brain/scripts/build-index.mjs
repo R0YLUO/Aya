@@ -13,11 +13,14 @@ import { fileURLToPath } from 'node:url';
 const brainDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
 const SECTIONS = [
+  ['handoff', 'Needs a human (handoffs)'],
   ['package', 'Packages (as-built)'],
   ['concept', 'Concepts'],
   ['decision', 'Decisions'],
   ['log', 'Log (newest first)'],
 ];
+
+const HANDOFF_STATUSES = ['open', 'resolved'];
 
 /** Parse the simple frontmatter subset the brain uses (string + inline-array values). */
 function parseFrontmatter(text, file) {
@@ -42,6 +45,9 @@ function parseFrontmatter(text, file) {
   }
   for (const required of ['title', 'type', 'summary', 'updated']) {
     if (!meta[required]) throw new Error(`${file}: frontmatter missing "${required}"`);
+  }
+  if (meta.type === 'handoff' && !HANDOFF_STATUSES.includes(meta.status)) {
+    throw new Error(`${file}: handoff pages need "status: open | resolved"`);
   }
   return meta;
 }
@@ -78,17 +84,22 @@ function buildIndex(pages) {
   for (const [type, heading] of SECTIONS) {
     const rows = pages.filter((p) => p.meta.type === type);
     if (rows.length === 0) continue;
-    // Log newest-first (date-prefixed filenames); everything else alphabetical.
-    rows.sort((a, b) =>
-      type === 'log' ? b.path.localeCompare(a.path) : a.path.localeCompare(b.path),
-    );
+    // Log newest-first (date-prefixed filenames); handoffs open-first; else alphabetical.
+    rows.sort((a, b) => {
+      if (type === 'log') return b.path.localeCompare(a.path);
+      if (type === 'handoff' && a.meta.status !== b.meta.status) {
+        return a.meta.status === 'open' ? -1 : 1;
+      }
+      return a.path.localeCompare(b.path);
+    });
     lines.push(`## ${heading}`, '');
     for (const { path, meta } of rows) {
       const pkgs =
         Array.isArray(meta.packages) && meta.packages.length > 0
           ? ` _(${meta.packages.join(', ')})_`
           : '';
-      lines.push(`- [${meta.title}](./${path})${pkgs} — ${meta.summary}`);
+      const status = type === 'handoff' ? `**[${meta.status}]** ` : '';
+      lines.push(`- ${status}[${meta.title}](./${path})${pkgs} — ${meta.summary}`);
     }
     lines.push('');
   }

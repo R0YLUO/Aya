@@ -72,6 +72,12 @@ For tasks that touch `packages/web` UI or routes, also run the Playwright e2e su
 `npm run test:e2e -w @aya/web` — and use the `ui-verify` skill for setup, fixtures, and
 screenshot-based visual checks. This is the web analogue of the eval gate on `packages/llm`.
 
+**Be honest about the level of verification you achieved.** If the acceptance criteria
+could only be met with mocks/stubs and real end-to-end verification needs something only
+the human can provide (an API key, an AWS/LangSmith account, a physical device, a
+deployment), the task may still be marked done — but you **must** record the gap as a
+handoff in step 6 so it surfaces to the human instead of being silently absorbed.
+
 ### 5. Mark it done
 
 Only after the acceptance criteria are demonstrably met:
@@ -89,6 +95,11 @@ Fold what you built and learned into the as-built knowledge base, per the ingest
   where, conventions, gotchas).
 - Create/update `brain/concepts/` pages for cross-cutting behaviour you built or had to work
   out; record notable implementation decisions in `brain/decisions/`.
+- **Record handoffs**: if anything about this task is pending the human — end-to-end
+  verification blocked on a key/account/device, a setup step, a decision — create
+  `brain/handoffs/<slug>.md` (`type: handoff`, `status: open`) per the format in
+  `brain/README.md`, or add your taskId to an existing handoff that already covers the
+  gap. The `project-manager` skill reports these to the human.
 - Add a log entry `brain/log/YYYY-MM-DD--<taskId>.md`.
 - Regenerate the index: `node brain/scripts/build-index.mjs`.
 
@@ -116,7 +127,8 @@ git commit -m "<type>(<scope>): <summary> [<taskId>]"
 - Follow the repo's commit conventions in `CLAUDE.md` (including the trailing `Co-Authored-By`
   line). Do **not** push unless the user asks.
 
-Then report: what was built, how it satisfies the acceptance criteria, the commit you made, and
+Then report: what was built, how it satisfies the acceptance criteria, **what level of
+verification was achieved (and any handoff recorded for the gap)**, the commit you made, and
 what the next ready task would be (you may run `next-task.js` again to show it).
 
 ## Scripts reference
@@ -143,3 +155,6 @@ Node's standard library (Node >= 22) — no install step.
   Never commit a task that didn't pass verification, and never push unless the user asks.
 - **The brain is part of the task.** Don't skip step 6 — a task whose knowledge never lands in
   `brain/` forces the next agent to rediscover it from the code.
+- **Done ≠ verified end-to-end.** Marking a task done on mock-level verification without
+  recording the handoff for the remaining gap hides work from the human and breaks the
+  `project-manager` skill's reporting. When in doubt, write the handoff.

@@ -4,6 +4,13 @@
 > Read this file first, then open only the pages relevant to your task.
 > Schema and workflows: [README.md](./README.md).
 
+## Needs a human (handoffs)
+
+- **[open]** [Anthropic API key + model ids for real LLM verification](./handoffs/anthropic-api-key.md) _(llm)_ — runOcr and analyzeText are done but have only ever run against mocked runners — they have never hit the real Anthropic API.
+- **[open]** [AWS account & credentials for the infra tasks](./handoffs/aws-account.md) _(api)_ — All five infra-* tasks (SST, DynamoDB, S3, API Gateway, web hosting) need an AWS account, credentials, and a region choice before they can start.
+- **[open]** [LangSmith account & keys for tracing and evals](./handoffs/langsmith-account.md) _(llm, evals)_ — Tracing wiring is built but silently no-ops without LANGCHAIN_* env; the evals package will need a LangSmith project for datasets.
+- **[open]** [Run the mobile app on a simulator/device](./handoffs/mobile-device-run.md) _(mobile)_ — All mobile work is verified via framework-free unit tests only; the RN app has never been launched, and camera capture needs a real device.
+
 ## Packages (as-built)
 
 - [@aya/api](./packages/api.md) _(api)_ — Transport-agnostic handlers (health, uploads built; pages/shares/router todo), ApiError→envelope mapping, DynamoDB repository, S3 presign, short-URL service.
@@ -32,5 +39,6 @@
 ## Log (newest first)
 
 - [web e2e: Playwright harness + ui-verify skill (ADR-0011)](./log/2026-06-10--web-e2e-playwright.md) _(web, shared)_ — Added the hermetic Playwright e2e harness (stub API + next dev), 6 share-reader specs, the ui-verify skill, Playwright MCP registration, and the e2e gate in golden rule 2.
+- [project-manager skill + handoffs ledger added](./log/2026-06-10--project-manager-skill.md) — New .claude/skills/project-manager (status reports for the human) and brain/handoffs/ (needs-a-human ledger); product-implementation now records verification gaps as handoffs.
 - [llm-analyze-text: analyzeText implemented](./log/2026-06-10--llm-analyze-text.md) _(llm)_ — Implemented analyzeText in src/analyze-text.ts with two-phase retry, reconstruction enforcement, and AnalysisFailedError.
 - [Bootstrap — brain created, 27 done tasks backfilled](./log/2026-06-10--bootstrap-backfill.md) _(shared, llm, api, web, mobile)_ — Created the brain (schema, index builder) and backfilled as-built knowledge from all 27 completed plan tasks.
