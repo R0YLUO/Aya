@@ -17,7 +17,7 @@ done and, where practical, as the test cases to write first (TDD).
 ## The loop
 
 Work **one task per iteration** unless the user explicitly asks you to continue through
-several. Each iteration ends by **committing** the finished task (step 6), then stop and report
+several. Each iteration ends by **committing** the finished task (step 7), then stop and report
 what you did before picking the next one.
 
 ### 1. Pick the next ready task
@@ -45,8 +45,12 @@ node .claude/skills/product-implementation/scripts/update-task.js <taskId> progr
 
 ### 3. Implement it
 
-- Read the relevant `architecture/` (`specs/`) doc(s) for the task's area first — they are the
-  source of truth (see the repo `CLAUDE.md`).
+- **Query the brain first**: read `brain/index.md`, then the brain pages for the package(s)
+  and concept(s) the task touches. They tell you what already exists, the conventions to
+  follow, and known gotchas — so you read only the code the brain points you at
+  (see `brain/README.md`).
+- Read the relevant `specs/` doc(s) for the task's area — they are the source of truth for
+  intent (see the repo `CLAUDE.md`).
 - Honour the repo's golden rules: types live once in `packages/shared`; LLM output is
   Zod-validated; keep the scan path to two LLM calls and stateless; no secrets in code.
 - Build strictly to the task's `acceptanceCriteria`. Prefer writing the tests the criteria
@@ -72,10 +76,26 @@ Only after the acceptance criteria are demonstrably met:
 node .claude/skills/product-implementation/scripts/update-task.js <taskId> done
 ```
 
-### 6. Commit the completed task
+### 6. Update the brain (ingest the task)
+
+Fold what you built and learned into the as-built knowledge base, per the ingest workflow in
+`brain/README.md`:
+
+- Update `brain/packages/<package>.md` for each package you touched (status, what lives
+  where, conventions, gotchas).
+- Create/update `brain/concepts/` pages for cross-cutting behaviour you built or had to work
+  out; record notable implementation decisions in `brain/decisions/`.
+- Add a log entry `brain/log/YYYY-MM-DD--<taskId>.md`.
+- Regenerate the index: `node brain/scripts/build-index.mjs`.
+
+Keep pages short and as-built (no spec duplication). These changes ride in the task's commit
+(step 7), so the brain and the code stay consistent at every commit.
+
+### 7. Commit the completed task
 
 Every completed task ends with **one commit** that captures all of its work, including the
-`implementation_plan.json` status change. Stage and commit from the repo root:
+`implementation_plan.json` status change and the brain updates (step 6). Stage and commit
+from the repo root:
 
 ```bash
 git add -A
@@ -115,5 +135,7 @@ Node's standard library (Node >= 22) — no install step.
   exit 3, the right move is to finish blockers, not to force a blocked task.
 - **Stop on failure.** If implementation or verification fails, leave the task in `progress`,
   report the failure, and let the user decide — don't mark it `done` and don't commit.
-- **One commit per completed task.** A task isn't finished until its work is committed (step 6).
+- **One commit per completed task.** A task isn't finished until its work is committed (step 7).
   Never commit a task that didn't pass verification, and never push unless the user asks.
+- **The brain is part of the task.** Don't skip step 6 — a task whose knowledge never lands in
+  `brain/` forces the next agent to rediscover it from the code.

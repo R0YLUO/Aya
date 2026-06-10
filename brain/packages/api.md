@@ -1,0 +1,62 @@
+---
+title: "@aya/api"
+type: package
+packages: [api]
+tasks: [api-package-scaffold, api-error-envelope, api-dynamodb-repository, api-s3-presign-service, api-short-url-service, api-handler-health, api-handler-uploads]
+summary: Transport-agnostic handlers (health, uploads built; pages/shares/router todo), ApiError→envelope mapping, DynamoDB repository, S3 presign, short-URL service.
+updated: 2026-06-10
+---
+
+# @aya/api (as built)
+
+Lambda-destined backend. **No router yet** (task `api-router` todo): handlers are
+transport-agnostic functions; API Gateway adaptation and the central error catch will
+live in the router.
+
+## Status
+
+- Built: `errors.ts`, `repositories/`, `services/`, handlers for `GET /health` and
+  `POST /uploads`.
+- Todo: `api-handler-pages` (the scan orchestration), `api-handler-shares-create`,
+  `api-handler-shares-resolve`, `api-router`. The `infra-*` tasks (SST) are all todo.
+
+## What lives where
+
+- `src/handlers/types.ts` — the handler contract: `(HandlerRequest) =>
+  HandlerResult`. `HandlerRequest` carries pre-parsed `body` (router parses, handler
+  validates with the shared schema) and `pathParameters`. **No API Gateway types in
+  handlers.**
+- `src/errors.ts` — `ApiError` + convenience constructors (`validationError`,
+  `imageNotFound`, …) carrying canonical status + PRD copy, and `toErrorResponse`
+  mapping any thrown value to `{statusCode, body: envelope}`. See
+  [error-handling](../concepts/error-handling.md).
+- `src/repositories/keys.ts` + `page-repository.ts` — single-table item shapes and
+  `PageRepository` (`savePageWithPhrasesAndShare` transactional write,
+  `getPageWithPhrases` one partition query, `resolveShare`). See
+  [dynamodb-single-table](../concepts/dynamodb-single-table.md).
+- `src/services/s3-presign-service.ts` — `presignUpload(contentType?)` →
+  `{uploadUrl, imageKey, expiresInSeconds}` (key `uploads/YYYY/MM/DD/<uuid>.jpg`,
+  TTL 300s) and `getUploadedImage(imageKey)` → bytes, throwing `image_not_found` on
+  any S3 not-found shape.
+- `src/services/short-url-service.ts` — `generateShareCode()`: 8-char base62 via
+  CSPRNG with rejection sampling (uniform, unguessable); `buildShareUrl(code)` →
+  `${WEB_BASE_URL}/s/${code}` (base injected, trailing slash normalised).
+
+## Conventions (the todo handlers must follow)
+
+- Handlers are **factories** (`makeUploadsHandler(presign)`) with services injected;
+  config (bucket, table name, base URL) is resolved at the edge, never inside.
+- Validate the body with the shared schema via `safeParse`; on failure throw
+  `validationError('…', { issues: parsed.error.issues })`.
+- Throwing `ApiError` is the canonical non-200 path; handlers return only success
+  results. The router will own `toErrorResponse`.
+- Empty/absent body on `POST /uploads` is valid (defaults to `{}` → image/jpeg).
+
+## Not yet decided / watch out
+
+- The scan handler (`POST /pages`) must stay **stateless** (no persistence — golden
+  rule #6) and orchestrate `getUploadedImage` → `runOcr` → `analyzeText`, mapping OCR
+  statuses `unreadable`/`no_chinese_text` to their `ApiError`s. `analyzeText` is still
+  a stub in `@aya/llm` — `api-handler-pages` depends on `llm-analyze-text`.
+- Share creation should validate `checkReconstruction` before persisting, and is the
+  **only** write path.
