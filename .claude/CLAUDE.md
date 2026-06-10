@@ -76,6 +76,7 @@ npm run build          # turbo run build
 npm run dev            # turbo run dev
 npm run typecheck      # turbo run typecheck  ← shared-types contract holds across packages
 npm run lint           # turbo run lint
+npm run test:e2e       # turbo run test:e2e  ← Playwright e2e for the web reader (hermetic stub API; see the ui-verify skill)
 npm run clean          # turbo run clean
 npm run eval -w packages/evals   # run the LLM eval suite (once packages/evals exists)
 ```
@@ -87,7 +88,9 @@ Node >= 22, npm 10.9.x (see root `package.json`).
 1. **Read the relevant `specs/` doc before designing.** It is the source of truth for intent.
 2. **No prompt/chain/model change without an eval run.** Anything touching `packages/llm`
    (prompts, output schemas, model config) must run the eval suite and not regress. Accuracy is
-   non-negotiable — see [`specs/06-evals.md`](./specs/06-evals.md).
+   non-negotiable — see [`specs/06-evals.md`](./specs/06-evals.md). Likewise, anything touching
+   `packages/web` UI/routes must pass the Playwright e2e suite
+   (`npm run test:e2e -w @aya/web` — see the `ui-verify` skill and ADR-0011).
 3. **LLM output is always structured and Zod-validated.** Never render or trust raw model text.
    The analysis call must pass the **reconstruction check**
    (`tokens.join("") === fullText`) — this guarantees faithful page rebuilds.

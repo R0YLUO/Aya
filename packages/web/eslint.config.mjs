@@ -14,6 +14,17 @@ export default [
     ignores: ['.next/**', 'next-env.d.ts'],
   },
   {
+    // The e2e helper scripts (stub server, screenshot) run under plain Node.
+    files: ['e2e/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        URL: 'readonly',
+      },
+    },
+  },
+  {
     rules: {
       'no-restricted-imports': [
         'error',

@@ -68,6 +68,10 @@ npm run typecheck && npm run lint && npm run build
 
 plus any package-specific tests/evals the task names. Do not mark a task done if these fail.
 
+For tasks that touch `packages/web` UI or routes, also run the Playwright e2e suite —
+`npm run test:e2e -w @aya/web` — and use the `ui-verify` skill for setup, fixtures, and
+screenshot-based visual checks. This is the web analogue of the eval gate on `packages/llm`.
+
 ### 5. Mark it done
 
 Only after the acceptance criteria are demonstrably met:

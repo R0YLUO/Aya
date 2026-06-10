@@ -3,7 +3,7 @@ title: "@aya/web"
 type: package
 packages: [web]
 tasks: [web-package-scaffold, web-share-page-ssr, web-reader-component, web-phrase-popup]
-summary: Next.js share reader — /s/{code} SSR route, typed share client, Reader with render-prop popups. All four planned web tasks are done.
+summary: Next.js share reader — /s/{code} SSR route, typed share client, Reader with render-prop popups, hermetic Playwright e2e harness. All four planned web tasks are done.
 updated: 2026-06-10
 ---
 
@@ -36,6 +36,10 @@ Next.js (App Router) web reader. Depends on `@aya/shared` + HTTP only. All plann
 - `src/components/ReaderWithPopups.tsx` — the shipped composition;
   `SharePageView.tsx` — presentational found/not-found view, unit-testable apart from
   the route.
+- `e2e/` + `playwright.config.ts` — hermetic Playwright e2e harness (fixture stub API +
+  `next dev`; `npm run test:e2e`). See
+  [web-e2e-playwright](../concepts/web-e2e-playwright.md) and the `ui-verify` skill;
+  e2e is a gate for web-touching changes (CLAUDE.md golden rule 2, ADR-0011).
 
 ## Conventions
 

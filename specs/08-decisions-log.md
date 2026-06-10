@@ -163,3 +163,33 @@ no PII. Removing auth keeps the system simple and fast to build.
 **Trade-off.** Anyone with a share code can read that page, and the API is publicly callable.
 Accepted for now; **must be revisited before a public production launch** (see the PRD's privacy
 note) — at minimum rate limiting and abuse protection on the LLM endpoints.
+
+---
+
+## ADR-0011 — Playwright (local, hermetic) for web e2e & agent UI verification
+**Status:** accepted · **Date:** 2026-06-10
+
+**Decision.** Web e2e tests and agent-driven UI verification run on **Playwright**, locally and
+headless, in `packages/web/e2e/`. Playwright boots the system under test itself: a **fixture
+stub API** (`e2e/stub-server.mjs`) serving `GET /shares/{code}` from JSON fixtures that are
+validated at startup against `ShareResolveResponseSchema` **and** the reconstruction invariant,
+plus `next dev` pointed at it via `AYA_API_BASE_URL`. Runs are hermetic — no deployed backend,
+no network, no LLM calls. The harness is part of the development lifecycle: any change touching
+`packages/web` UI/routes must pass `npm run test:e2e -w @aya/web` (golden rule 2; enforced via
+the `ui-verify` skill and the implementation loop). **BrowserStack is deferred**: if/when
+cross-browser or real-device coverage is needed (after `infra-web-hosting` ships), attach the
+*same* Playwright suite to BrowserStack via their SDK rather than rewriting tests.
+
+**Why.** Local headless runs are free, fast (~10 s), and scale-to-zero (*Fast & Efficient*);
+asserting hover-popup behaviour, tappable phrase order, and the reconstruction invariant in a
+real browser guards the reader experience (*User-Experience-Centric*, *Reliable & Stable*);
+schema-validated fixtures keep e2e in lock-step with the shared contract so contract drift fails
+at stub startup, not in production (*Extensible*). Failure screenshots/traces and the
+`e2e/screenshot.mjs` helper give coding agents artifacts they can read and judge visually.
+
+**Alternatives.** BrowserStack now — rejected: paid remote sessions with per-run latency, weak
+artifact introspection for agents, and no cross-browser risk while the reader is undeployed.
+Mobile e2e (Detox / App Automate) — premature: the RN app has no native shell yet and the client
+team owns its internals. Mocking the API from the test with `page.route()` — impossible for this
+app: the share page fetches server-side (SSR), so interception must happen at the process
+boundary, hence the stub server.

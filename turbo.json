@@ -25,6 +25,10 @@
       "inputs": ["src/**", "tsconfig.json", "tsconfig.test.json", "package.json"],
       "outputs": ["dist-test/**"]
     },
+    "test:e2e": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
     "clean": {
       "cache": false
     }

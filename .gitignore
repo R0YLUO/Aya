@@ -8,6 +8,11 @@ dist-test/
 .env.local
 .env.*.local
 
+# playwright e2e artifacts
+playwright-report/
+test-results/
+e2e-artifacts/
+
 # git worktrees created by parallel agents
 .claude/worktrees/
 *.tsbuildinfo

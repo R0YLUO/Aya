@@ -10,7 +10,7 @@
 - [@aya/llm](./packages/llm.md) _(llm)_ — The two LLM calls (runOcr and analyzeText both built), structured-output runner, retry helper, LangSmith tagging, env-sourced model config.
 - [@aya/mobile](./packages/mobile.md) _(mobile)_ — RN app — typed API client, camera/scan state machines, local-first page store. Reader view in progress; error-states, phrase popup, share flow todo.
 - [@aya/shared](./packages/shared.md) _(shared)_ — Domain types, Zod contracts, error codes, and the reconstruction check — the single source every package imports from.
-- [@aya/web](./packages/web.md) _(web)_ — Next.js share reader — /s/{code} SSR route, typed share client, Reader with render-prop popups. All four planned web tasks are done.
+- [@aya/web](./packages/web.md) _(web)_ — Next.js share reader — /s/{code} SSR route, typed share client, Reader with render-prop popups, hermetic Playwright e2e harness. All four planned web tasks are done.
 
 ## Concepts
 
@@ -22,6 +22,7 @@
 - [Share flow (end to end)](./concepts/share-flow.md) _(api, web, mobile)_ — POST /shares persists page+phrases+share transactionally and mints /s/{code}; web resolves it SSR. Both share handlers and the mobile UI are still todo.
 - [Structured LLM output, retries & tracing](./concepts/structured-llm-output.md) _(llm)_ — The StructuredRunner pattern every LLM call follows — Zod-bound runner, injectable for tests, bounded retries, defensive re-parse, tagged runs.
 - [Testing & dependency-injection conventions](./concepts/testing-and-di.md) _(shared, llm, api, web, mobile)_ — How every package tests (node:test vs vitest), and the pervasive inject-everything pattern that keeps tests offline and device-free.
+- [Web e2e & UI verification (Playwright)](./concepts/web-e2e-playwright.md) _(web, shared)_ — The hermetic Playwright harness in packages/web/e2e — stub API on 4545, next dev on 3100, fixture-filename-is-the-share-code, and the ui-verify skill that gates web changes.
 
 ## Decisions
 
@@ -30,5 +31,6 @@
 
 ## Log (newest first)
 
+- [web e2e: Playwright harness + ui-verify skill (ADR-0011)](./log/2026-06-10--web-e2e-playwright.md) _(web, shared)_ — Added the hermetic Playwright e2e harness (stub API + next dev), 6 share-reader specs, the ui-verify skill, Playwright MCP registration, and the e2e gate in golden rule 2.
 - [llm-analyze-text: analyzeText implemented](./log/2026-06-10--llm-analyze-text.md) _(llm)_ — Implemented analyzeText in src/analyze-text.ts with two-phase retry, reconstruction enforcement, and AnalysisFailedError.
 - [Bootstrap — brain created, 27 done tasks backfilled](./log/2026-06-10--bootstrap-backfill.md) _(shared, llm, api, web, mobile)_ — Created the brain (schema, index builder) and backfilled as-built knowledge from all 27 completed plan tasks.

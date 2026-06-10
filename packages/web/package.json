@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "clean": "rm -rf .next .turbo node_modules/.cache"
+    "test:e2e": "playwright test",
+    "clean": "rm -rf .next .turbo node_modules/.cache playwright-report test-results e2e-artifacts"
   },
   "dependencies": {
     "@aya/shared": "*",
@@ -19,6 +20,7 @@
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",

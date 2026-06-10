@@ -1,0 +1,153 @@
+{
+  "page": {
+    "id": "page_e2e_fixture_001",
+    "fullText": "他每天早上跑步，风雨无阻。\n这是他保持健康的秘诀。",
+    "createdAt": "2026-06-10T08:00:00.000Z"
+  },
+  "phrases": [
+    {
+      "id": "phr_001",
+      "pageId": "page_e2e_fixture_001",
+      "index": 1,
+      "original": "他",
+      "pinyin": "tā",
+      "translation": "he",
+      "contextualMeaning": null
+    },
+    {
+      "id": "phr_002",
+      "pageId": "page_e2e_fixture_001",
+      "index": 2,
+      "original": "每天",
+      "pinyin": "měi tiān",
+      "translation": "every day",
+      "contextualMeaning": null
+    },
+    {
+      "id": "phr_003",
+      "pageId": "page_e2e_fixture_001",
+      "index": 3,
+      "original": "早上",
+      "pinyin": "zǎoshang",
+      "translation": "in the morning",
+      "contextualMeaning": null
+    },
+    {
+      "id": "phr_004",
+      "pageId": "page_e2e_fixture_001",
+      "index": 4,
+      "original": "跑步",
+      "pinyin": "pǎobù",
+      "translation": "goes running",
+      "contextualMeaning": null
+    },
+    {
+      "id": "phr_005",
+      "pageId": "page_e2e_fixture_001",
+      "index": 5,
+      "original": "，",
+      "pinyin": null,
+      "translation": null,
+      "contextualMeaning": null
+    },
+    {
+      "id": "phr_006",
+      "pageId": "page_e2e_fixture_001",
+      "index": 6,
+      "original": "风雨无阻",
+      "pinyin": "fēngyǔ wúzǔ",
+      "translation": "rain or shine",
+      "contextualMeaning": "Idiom (chengyu): literally \"wind and rain are no obstacle\" — he runs no matter the weather."
+    },
+    {
+      "id": "phr_007",
+      "pageId": "page_e2e_fixture_001",
+      "index": 7,
+      "original": "。",
+      "pinyin": null,
+      "translation": null,
+      "contextualMeaning": null
+    },
+    {
+      "id": "phr_008",
+      "pageId": "page_e2e_fixture_001",
+      "index": 8,
+      "original": "\n",
+      "pinyin": null,
+      "translation": null,
+      "contextualMeaning": null
+    },
+    {
+      "id": "phr_009",
+      "pageId": "page_e2e_fixture_001",
+      "index": 9,
+      "original": "这",
+      "pinyin": "zhè",
+      "translation": "this",
+      "contextualMeaning": null
+    },
+    {
+      "id": "phr_010",
+      "pageId": "page_e2e_fixture_001",
+      "index": 10,
+      "original": "是",
+      "pinyin": "shì",
+      "translation": "is",
+      "contextualMeaning": null
+    },
+    {
+      "id": "phr_011",
+      "pageId": "page_e2e_fixture_001",
+      "index": 11,
+      "original": "他",
+      "pinyin": "tā",
+      "translation": "his",
+      "contextualMeaning": "Before 保持健康的秘诀, 他 reads possessively: \"his\" secret."
+    },
+    {
+      "id": "phr_012",
+      "pageId": "page_e2e_fixture_001",
+      "index": 12,
+      "original": "保持",
+      "pinyin": "bǎochí",
+      "translation": "to maintain; to keep",
+      "contextualMeaning": null
+    },
+    {
+      "id": "phr_013",
+      "pageId": "page_e2e_fixture_001",
+      "index": 13,
+      "original": "健康",
+      "pinyin": "jiànkāng",
+      "translation": "health; healthy",
+      "contextualMeaning": null
+    },
+    {
+      "id": "phr_014",
+      "pageId": "page_e2e_fixture_001",
+      "index": 14,
+      "original": "的",
+      "pinyin": "de",
+      "translation": "(possessive particle)",
+      "contextualMeaning": "Links 保持健康 to 秘诀: \"the secret of staying healthy\"."
+    },
+    {
+      "id": "phr_015",
+      "pageId": "page_e2e_fixture_001",
+      "index": 15,
+      "original": "秘诀",
+      "pinyin": "mìjué",
+      "translation": "secret (of success); knack",
+      "contextualMeaning": null
+    },
+    {
+      "id": "phr_016",
+      "pageId": "page_e2e_fixture_001",
+      "index": 16,
+      "original": "。",
+      "pinyin": null,
+      "translation": null,
+      "contextualMeaning": null
+    }
+  ]
+}
