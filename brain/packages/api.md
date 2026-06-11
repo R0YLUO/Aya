@@ -2,9 +2,9 @@
 title: "@aya/api"
 type: package
 packages: [api]
-tasks: [api-package-scaffold, api-error-envelope, api-dynamodb-repository, api-s3-presign-service, api-short-url-service, api-handler-health, api-handler-uploads]
-summary: Transport-agnostic handlers (health, uploads built; pages/shares/router todo), ApiError→envelope mapping, DynamoDB repository, S3 presign, short-URL service.
-updated: 2026-06-10
+tasks: [api-package-scaffold, api-error-envelope, api-dynamodb-repository, api-s3-presign-service, api-short-url-service, api-handler-health, api-handler-uploads, api-handler-pages]
+summary: Transport-agnostic handlers (health, uploads, pages/scan built; shares/router todo), ApiError→envelope mapping, DynamoDB repository, S3 presign, short-URL service.
+updated: 2026-06-11
 ---
 
 # @aya/api (as built)
@@ -15,10 +15,10 @@ live in the router.
 
 ## Status
 
-- Built: `errors.ts`, `repositories/`, `services/`, handlers for `GET /health` and
-  `POST /uploads`.
-- Todo: `api-handler-pages` (the scan orchestration), `api-handler-shares-create`,
-  `api-handler-shares-resolve`, `api-router`. The `infra-*` tasks (SST) are all todo.
+- Built: `errors.ts`, `repositories/`, `services/`, handlers for `GET /health`,
+  `POST /uploads`, and `POST /pages` (the scan orchestration).
+- Todo: `api-handler-shares-create`, `api-handler-shares-resolve`, `api-router`. The
+  `infra-*` tasks (SST) are all todo.
 
 ## What lives where
 
@@ -41,6 +41,21 @@ live in the router.
 - `src/services/short-url-service.ts` — `generateShareCode()`: 8-char base62 via
   CSPRNG with rejection sampling (uniform, unguessable); `buildShareUrl(code)` →
   `${WEB_BASE_URL}/s/${code}` (base injected, trailing slash normalised).
+- `src/handlers/pages.ts` — `makeScanHandler(deps)`: the **stateless** `POST /pages`
+  orchestration. Deps are injected (`fetchImage`, `runOcr`, `analyzeText`, plus
+  `log`/`clock`/`now`) so the orchestration unit-tests fully offline — it has **no LLM
+  or AWS import and no repository**, which makes "persists nothing" structural. Flow:
+  validate `{imageKey}` (`ScanRequestSchema`) → `fetchImage` (404 `image_not_found`
+  propagates) → OCR (`unreadable`→422 `image_unreadable`, `no_chinese_text`→422) →
+  mint `Page` (uuid + `createdAt`) → `analyzeText` (throw→502 `analysis_failed`) →
+  `ScanResponseSchema.safeParse` shape-check (unparseable→502) → 200 `AnalyzedPage`.
+  Emits one `page_scanned` JSON log line on every terminal path (specs/05).
+- `src/handlers/pages-wiring.ts` — `makeScanHandlerWithLlm(presign, opts)`: the live
+  adapter binding the real `@aya/llm` `runOcr`/`analyzeText` and
+  `S3PresignService.getUploadedImage` to the injectable shapes. **This is the only
+  place `@aya/api` imports `@aya/llm`** (dependency direction; added `@aya/llm` to
+  package deps). Image bytes are passed as `{kind:'bytes', data, mediaType}` (default
+  `image/jpeg`).
 
 ## Conventions (the todo handlers must follow)
 
@@ -54,9 +69,14 @@ live in the router.
 
 ## Not yet decided / watch out
 
-- The scan handler (`POST /pages`) must stay **stateless** (no persistence — golden
-  rule #6) and orchestrate `getUploadedImage` → `runOcr` → `analyzeText`, mapping OCR
-  statuses `unreadable`/`no_chinese_text` to their `ApiError`s. `analyzeText` is still
-  a stub in `@aya/llm` — `api-handler-pages` depends on `llm-analyze-text`.
+- **Reconstruction is NOT enforced by `AnalyzedPageSchema`** (it only checks shape:
+  `index` is a positive **1-based** int, fields nullable). The reconstruction invariant
+  is enforced upstream inside `@aya/llm` `analyzeText`, which throws on mismatch; the
+  scan handler relies on that throw → 502, not on the schema. Don't assume the shared
+  schema guards reconstruction.
+- **Token counts are `null` in the `page_scanned` log for now.** `runOcr`/`analyzeText`
+  don't surface usage (it lives in LangSmith — specs/05). The handler/log line already
+  carry `ocrTokens`/`analysisTokens` fields; populate them when the LLM calls return
+  usage. Not a human blocker, so no handoff.
 - Share creation should validate `checkReconstruction` before persisting, and is the
   **only** write path.

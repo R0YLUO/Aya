@@ -2,9 +2,9 @@
 title: Scan flow (end to end)
 type: concept
 packages: [mobile, api, llm]
-tasks: [mobile-scan-flow, api-handler-uploads, api-s3-presign-service, llm-run-ocr]
-summary: Photo → presign → S3 PUT → POST /pages (OCR + analysis, stateless) → AnalyzedPage saved locally. What's built vs. pending at each hop.
-updated: 2026-06-10
+tasks: [mobile-scan-flow, api-handler-uploads, api-s3-presign-service, llm-run-ocr, llm-analyze-text, api-handler-pages]
+summary: Photo → presign → S3 PUT → POST /pages (OCR + analysis, stateless) → AnalyzedPage saved locally. Full server path now built; only the router/deploy remain.
+updated: 2026-06-11
 ---
 
 # Scan flow (as built so far)
@@ -13,9 +13,10 @@ updated: 2026-06-10
 mobile runScan()                       api                              llm
   ① POST /uploads ───────────► makeUploadsHandler → S3PresignService
   ② PUT bytes ────────────────► (S3 directly, presigned URL)
-  ③ POST /pages ──────────────► [NOT BUILT: api-handler-pages]
+  ③ POST /pages ──────────────► makeScanHandler (built; wired via
+                                   makeScanHandlerWithLlm)
                                    getUploadedImage(imageKey)
-                                   → runOcr (built) → analyzeText (STUB)
+                                   → runOcr (built) → analyzeText (built)
                                    → AnalyzedPage (no persistence!)
   savePage() → LocalPageStore
 ```
@@ -23,8 +24,9 @@ mobile runScan()                       api                              llm
 - Client-side orchestration (`packages/mobile/src/scan/runScan.ts`) is **done**: it
   reads image bytes exactly once, makes exactly one `POST /pages` call, persists the
   result locally, throws typed `ApiError`s upward.
-- Server side, only `POST /uploads` exists. The pages handler is the **integration
-  point still missing**: blocked on `llm-analyze-text`.
+- Server side, `POST /uploads` and `POST /pages` both exist now. The remaining gap is
+  the **router** (`api-router`) that maps API Gateway events to handlers and owns the
+  central `toErrorResponse` catch, plus the `infra-*` SST deploy.
 
 ## Contracts the pages handler must honour (already fixed by built code)
 

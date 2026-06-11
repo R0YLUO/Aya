@@ -205,7 +205,7 @@
   {
     "taskId": "api-handler-pages",
     "description": "Implement the POST /pages scan handler: validate { imageKey }, fetch the image from S3, run runOcr; map OCR unreadable/no_chinese_text to 422 errors; on ok create a Page (uuid, fullText, createdAt) and run analyzeText; return { page, phrases }. Persist nothing. Emit the per-scan structured log line (page_scanned) with latencies, token counts, phraseCount, and outcome.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "api-handler-uploads",
       "llm-run-ocr",

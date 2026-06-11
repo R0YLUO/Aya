@@ -45,3 +45,18 @@ export {
 export type { Handler, HandlerRequest, HandlerResult } from './handlers/types.js';
 export { healthHandler } from './handlers/health.js';
 export { makeUploadsHandler } from './handlers/uploads.js';
+export { makeScanHandler } from './handlers/pages.js';
+export type {
+  ScanHandlerDeps,
+  ScanImageInput,
+  StageTokens,
+  OcrStageResult,
+  AnalysisStageResult,
+  FetchImage,
+  RunOcrFn,
+  AnalyzeTextFn,
+  LogFn,
+  ScanOutcome,
+} from './handlers/pages.js';
+export { makeScanHandlerWithLlm } from './handlers/pages-wiring.js';
+export type { ScanWiringOptions } from './handlers/pages-wiring.js';
