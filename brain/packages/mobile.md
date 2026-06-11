@@ -2,9 +2,9 @@
 title: "@aya/mobile"
 type: package
 packages: [mobile]
-tasks: [mobile-package-scaffold, mobile-camera-capture, mobile-scan-flow, mobile-local-store]
-summary: RN app — typed API client, camera/scan state machines, local-first page store. Reader view in progress; error-states, phrase popup, share flow todo.
-updated: 2026-06-10
+tasks: [mobile-package-scaffold, mobile-camera-capture, mobile-scan-flow, mobile-local-store, mobile-reader-view]
+summary: RN app — typed API client, camera/scan state machines, local-first page store, tappable reader view. Error-states, phrase popup, share flow todo.
+updated: 2026-06-11
 ---
 
 # @aya/mobile (as built)
@@ -15,10 +15,8 @@ orchestration) with thin RN screens over it.
 
 ## Status
 
-- Done: scaffold, camera capture, scan flow, local store.
-- In progress: `mobile-reader-view` (claimed in the plan — check before touching
-  reader files). Todo: `mobile-error-states`, `mobile-phrase-popup`,
-  `mobile-share-flow`.
+- Done: scaffold, camera capture, scan flow, local store, reader view.
+- Todo: `mobile-error-states`, `mobile-phrase-popup`, `mobile-share-flow`.
 
 ## What lives where
 
@@ -43,6 +41,14 @@ orchestration) with thin RN screens over it.
 - `src/errors/messages.ts` — `ScanErrorCode → {message, cta, ctaLabel}` with PRD copy
   verbatim (`image_unreadable`/`no_chinese_text` → "Retake"; `network_error`/
   `analysis_failed` → "Retry"). Task `mobile-error-states` builds the UI over this.
+- `src/reader/` — PRD Story 2 reader. `tokens.ts` is the framework-free core:
+  `readerTokens(page)` sorts phrases by `index` (defensively) and tags each as
+  `interactive` iff `pinyin !== null`; `reconstructText(page)` joins `original`s to
+  reproduce `fullText` (the reconstruction invariant). `ReaderView.tsx` is the thin
+  RN screen — one scrollable `<Text>` of nested `<Text>` runs (so line breaks in each
+  token's `original` are preserved); interactive runs get a dotted underline
+  affordance and call `onPhrasePress(phrase)` (wired by the future phrase popup);
+  null-analysis tokens render plain. Only analysed text is rendered, never the image.
 - `src/test-support/fixtures.ts` — shared valid `AnalyzedPage` fixtures for tests.
 
 ## Conventions (keep for the remaining mobile tasks)

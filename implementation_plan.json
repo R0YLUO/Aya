@@ -400,7 +400,7 @@
   {
     "taskId": "mobile-reader-view",
     "description": "Build the mobile reader view rendering an AnalyzedPage as clean, scrollable, legible text with each pinyin-bearing phrase tappable and punctuation/whitespace rendered as plain non-tappable text, preserving line breaks.",
-    "status": "progress",
+    "status": "done",
     "dependencies": [
       "mobile-local-store"
     ],

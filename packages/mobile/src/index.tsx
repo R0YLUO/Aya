@@ -44,3 +44,12 @@ export {
   type ScanEvent,
   type ScanningScreenProps,
 } from './scan/index.js';
+
+export {
+  ReaderView,
+  isInteractive,
+  readerTokens,
+  reconstructText,
+  type ReaderViewProps,
+  type ReaderToken,
+} from './reader/index.js';

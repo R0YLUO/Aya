@@ -15,7 +15,7 @@
 
 - [@aya/api](./packages/api.md) _(api)_ — Transport-agnostic handlers (health, uploads built; pages/shares/router todo), ApiError→envelope mapping, DynamoDB repository, S3 presign, short-URL service.
 - [@aya/llm](./packages/llm.md) _(llm)_ — The two LLM calls (runOcr and analyzeText both built), structured-output runner, retry helper, LangSmith tagging, env-sourced model config.
-- [@aya/mobile](./packages/mobile.md) _(mobile)_ — RN app — typed API client, camera/scan state machines, local-first page store. Reader view in progress; error-states, phrase popup, share flow todo.
+- [@aya/mobile](./packages/mobile.md) _(mobile)_ — RN app — typed API client, camera/scan state machines, local-first page store, tappable reader view. Error-states, phrase popup, share flow todo.
 - [@aya/shared](./packages/shared.md) _(shared)_ — Domain types, Zod contracts, error codes, and the reconstruction check — the single source every package imports from.
 - [@aya/web](./packages/web.md) _(web)_ — Next.js share reader — /s/{code} SSR route, typed share client, Reader with render-prop popups, hermetic Playwright e2e harness. All four planned web tasks are done.
 
@@ -38,6 +38,7 @@
 
 ## Log (newest first)
 
+- [mobile-reader-view: tappable scrollable reader (recovery)](./log/2026-06-11--mobile-reader-view.md) _(mobile)_ — Recovered abandoned worktree work for the mobile reader view (PRD Story 2) onto main — framework-free token logic + thin RN ReaderView, 5 new tests.
 - [web e2e: Playwright harness + ui-verify skill (ADR-0011)](./log/2026-06-10--web-e2e-playwright.md) _(web, shared)_ — Added the hermetic Playwright e2e harness (stub API + next dev), 6 share-reader specs, the ui-verify skill, Playwright MCP registration, and the e2e gate in golden rule 2.
 - [project-manager skill + handoffs ledger added](./log/2026-06-10--project-manager-skill.md) — New .claude/skills/project-manager (status reports for the human) and brain/handoffs/ (needs-a-human ledger); product-implementation now records verification gaps as handoffs.
 - [llm-analyze-text: analyzeText implemented](./log/2026-06-10--llm-analyze-text.md) _(llm)_ — Implemented analyzeText in src/analyze-text.ts with two-phase retry, reconstruction enforcement, and AnalysisFailedError.

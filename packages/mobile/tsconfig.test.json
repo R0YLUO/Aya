@@ -25,11 +25,13 @@
     "src/scan/scanState.ts",
     "src/errors/messages.ts",
     "src/camera/types.ts",
+    "src/reader/tokens.ts",
     "src/test-support/fixtures.ts",
     "src/test-support/index.ts",
     "src/api/client.test.ts",
     "src/store/LocalPageStore.test.ts",
     "src/scan/runScan.test.ts",
-    "src/camera/captureReducer.test.ts"
+    "src/camera/captureReducer.test.ts",
+    "src/reader/tokens.test.ts"
   ]
 }

@@ -5,7 +5,7 @@ status: open
 packages: [mobile]
 tasks: [mobile-camera-capture, mobile-scan-flow, mobile-local-store, mobile-reader-view]
 summary: All mobile work is verified via framework-free unit tests only; the RN app has never been launched, and camera capture needs a real device.
-updated: 2026-06-10
+updated: 2026-06-11
 ---
 
 # Run the mobile app on a simulator/device
@@ -28,5 +28,8 @@ scan-flow verification also depends on a deployed API
 ## Verify after
 
 Walk PRD Story 1 on a device: open camera → capture → preview → retake/confirm.
+Also walk PRD Story 2: render an `AnalyzedPage` in `ReaderView` and confirm phrases
+are legibly sized, line breaks are preserved, the page scrolls smoothly, and only
+pinyin-bearing phrases are tappable (the underline affordance shows).
 Until the API is deployed, confirm at least that the app boots and screens render.
 Note observations here, then mark resolved (or file follow-up issues).
