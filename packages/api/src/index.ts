@@ -13,6 +13,7 @@
 export {
   ApiError,
   INTERNAL_ERROR_CODE,
+  NOT_FOUND_CODE,
   toErrorResponse,
   validationError,
   imageNotFound,
@@ -71,3 +72,10 @@ export type {
   SharesResolveHandlerDeps,
   ShareResolver,
 } from './handlers/shares-resolve.js';
+
+export { makeRouter } from './router.js';
+export type {
+  RouterRequest,
+  RouterResponse,
+  RouterHandlers,
+} from './router.js';

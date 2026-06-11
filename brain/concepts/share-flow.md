@@ -3,7 +3,7 @@ title: Share flow (end to end)
 type: concept
 packages: [api, web, mobile]
 tasks: [api-short-url-service, api-dynamodb-repository, web-share-page-ssr]
-summary: POST /shares persists page+phrases+share transactionally and mints /s/{code}; web resolves it SSR via GET /shares/{code}. Both handlers built; only mobile share UI + router todo.
+summary: POST /shares persists page+phrases+share transactionally and mints /s/{code}; web resolves it SSR via GET /shares/{code}. Both handlers + router built; only mobile share UI todo.
 updated: 2026-06-11
 ---
 
@@ -33,8 +33,10 @@ web /s/{code} (SSR, built) ─────────► GET /shares/{code}  (h
   calls `repository.resolveShare(code)`, returns `200` `AnalyzedPage` or throws
   `shareNotFound` (404) for an unknown/dangling code; an absent code is a 400
   `validation_error` before any query. Pure read — writes nothing.
-- Todo: `api-router`, `mobile-share-flow` (the UI invoking `sharePage` and
-  presenting the URL).
+- Built (router): `makeRouter` wires `POST /shares` → create and
+  `GET /shares/{code}` → resolve (and the other three routes) with the central error
+  catch; see [@aya/api](../packages/api.md).
+- Todo: `mobile-share-flow` (the UI invoking `sharePage` and presenting the URL).
 
 ## Constraints for the handlers
 

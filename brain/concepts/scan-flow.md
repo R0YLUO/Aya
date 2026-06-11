@@ -3,7 +3,7 @@ title: Scan flow (end to end)
 type: concept
 packages: [mobile, api, llm]
 tasks: [mobile-scan-flow, api-handler-uploads, api-s3-presign-service, llm-run-ocr, llm-analyze-text, api-handler-pages]
-summary: Photo → presign → S3 PUT → POST /pages (OCR + analysis, stateless) → AnalyzedPage saved locally. Full server path now built; only the router/deploy remain.
+summary: Photo → presign → S3 PUT → POST /pages (OCR + analysis, stateless) → AnalyzedPage saved locally. Full server path + router built; only the infra/deploy remains.
 updated: 2026-06-11
 ---
 
@@ -24,9 +24,10 @@ mobile runScan()                       api                              llm
 - Client-side orchestration (`packages/mobile/src/scan/runScan.ts`) is **done**: it
   reads image bytes exactly once, makes exactly one `POST /pages` call, persists the
   result locally, throws typed `ApiError`s upward.
-- Server side, `POST /uploads` and `POST /pages` both exist now. The remaining gap is
-  the **router** (`api-router`) that maps API Gateway events to handlers and owns the
-  central `toErrorResponse` catch, plus the `infra-*` SST deploy.
+- Server side, `POST /uploads` and `POST /pages` both exist, and the **router**
+  (`api-router`, `api/src/router.ts`) now maps method+path → handler, parses the JSON
+  body, and owns the central `toErrorResponse` catch. The remaining gap is the
+  `infra-*` SST deploy + the Lambda event ↔ `RouterRequest` adapter.
 
 ## Contracts the pages handler must honour (already fixed by built code)
 

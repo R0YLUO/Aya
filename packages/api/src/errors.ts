@@ -75,6 +75,15 @@ export const analysisFailed = (message?: string, details?: ErrorDetails): ApiErr
  */
 export const INTERNAL_ERROR_CODE = 'internal_error' as const;
 
+/**
+ * The code used when no route matches the request (HTTP 404). Like
+ * `internal_error`, it is intentionally NOT part of the PRD `ErrorCode` enum: an
+ * unknown route is a transport-level "no such endpoint", not one of the expected,
+ * client-actionable PRD failure states (which are resource-not-found cases like
+ * `image_not_found` / `share_not_found`).
+ */
+export const NOT_FOUND_CODE = 'not_found' as const;
+
 /** Error envelope shape, allowing the internal-error code for the 500 case. */
 type ApiErrorEnvelope =
   | ErrorEnvelope

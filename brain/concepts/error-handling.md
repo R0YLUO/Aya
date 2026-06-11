@@ -23,11 +23,16 @@ expected, client-actionable** failures: `image_unreadable`, `no_chinese_text`,
 like `imageUnreadable()`) is the canonical failure path; `toErrorResponse` maps
 anything else to a 500.
 
-## Two codes intentionally OUTSIDE the enum
+## Codes intentionally OUTSIDE the enum
 
 - `internal_error` (server, 500): "something we didn't anticipate" is not a PRD
   state, so it's excluded from `ErrorCode` — see
   [decision](../decisions/internal-error-outside-enum.md).
+- `not_found` (server, 404): the **router's unknown-route** code
+  (`NOT_FOUND_CODE` in `api/src/errors.ts`). "No such endpoint" is transport, not a
+  PRD client-actionable state — distinct from resource-not-found
+  (`image_not_found`/`share_not_found`). A 404 body from a missing route therefore
+  won't parse against the closed-enum `ErrorEnvelopeSchema`; check it structurally.
 - `network_error` (clients only): mobile synthesises it for transport failures /
   unparseable responses; it exists in `ScanErrorCode = ErrorCode | 'network_error'`,
   never on the wire from the server.

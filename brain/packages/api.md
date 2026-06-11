@@ -2,24 +2,26 @@
 title: "@aya/api"
 type: package
 packages: [api]
-tasks: [api-package-scaffold, api-error-envelope, api-dynamodb-repository, api-s3-presign-service, api-short-url-service, api-handler-health, api-handler-uploads, api-handler-pages, api-handler-shares-create, api-handler-shares-resolve]
-summary: Transport-agnostic handlers (health, uploads, pages/scan, shares-create, shares-resolve built; router todo), ApiError→envelope mapping, DynamoDB repository, S3 presign, short-URL service.
+tasks: [api-package-scaffold, api-error-envelope, api-dynamodb-repository, api-s3-presign-service, api-short-url-service, api-handler-health, api-handler-uploads, api-handler-pages, api-handler-shares-create, api-handler-shares-resolve, api-router]
+summary: Transport-agnostic handlers + router (method+path → handler, JSON parse, central error catch → standard envelope/500), ApiError→envelope mapping, DynamoDB repository, S3 presign, short-URL service.
 updated: 2026-06-11
 ---
 
 # @aya/api (as built)
 
-Lambda-destined backend. **No router yet** (task `api-router` todo): handlers are
-transport-agnostic functions; API Gateway adaptation and the central error catch will
-live in the router.
+Lambda-destined backend. Handlers are transport-agnostic functions; the **router**
+(`src/router.ts`) maps method+path → handler, parses the JSON body, and owns the
+central error catch. The API Gateway/Lambda adapter (an `infra-*` task) still has to
+convert a proxy event into a `RouterRequest` and back.
 
 ## Status
 
 - Built: `errors.ts`, `repositories/`, `services/`, handlers for `GET /health`,
   `POST /uploads`, `POST /pages` (the scan orchestration), `POST /shares` (the
   create handler — the only write path), and `GET /shares/{code}` (the resolve
-  read handler).
-- Todo: `api-router`. The `infra-*` tasks (SST) are all todo.
+  read handler), plus `router.ts` wiring them all together.
+- Todo: the `infra-*` tasks (SST) — including the Lambda event ↔ RouterRequest
+  adapter — are all todo.
 
 ## What lives where
 
@@ -72,6 +74,22 @@ live in the router.
   `shareNotFound` (404, `details: { code }`) → otherwise `200` with the
   `AnalyzedPage` (`{ page, phrases }`, phrases already index-ordered by the repo).
   Note `pathParameters?.['code']` (bracket access — `noPropertyAccessFromIndexSignature`).
+- `src/router.ts` — `makeRouter(handlers)`: the transport-agnostic routing core.
+  Takes a `RouterHandlers` bundle (constructed `health`/`uploads`/`scan`/
+  `sharesCreate`/`sharesResolve` handlers — injected, so the router is config-free)
+  and returns `(RouterRequest) => Promise<RouterResponse>`. `RouterRequest` is
+  `{ method, path, rawBody? }` (path WITHOUT query string). Five routes declared to
+  match specs/03 exactly: `POST /uploads`, `POST /pages`, `POST /shares`,
+  `GET /shares/{code}`, `GET /health`. Matching: method is case-insensitive; path is
+  normalised (trailing slash stripped, except root); `exact()` for fixed paths and
+  `oneParam('/shares','code')` for the single path param (regex-free — exactly one
+  non-empty trailing segment, no nested path, so bare `GET /shares` does NOT match).
+  Body parsing: only POSTs parse `rawBody` as JSON (empty/whitespace → `undefined`;
+  invalid JSON → `validationError` 400). **The router owns the central catch**: the
+  whole dispatch is wrapped in try/catch → `toErrorResponse(error)`, so an `ApiError`
+  thrown by any handler keeps its status/code and anything else becomes a 500
+  `internal_error`; the router itself never throws. Unknown method+path → `notFound()`
+  → 404 with code `not_found` (a constant, see below).
 - `src/handlers/pages-wiring.ts` — `makeScanHandlerWithLlm(presign, opts)`: the live
   adapter binding the real `@aya/llm` `runOcr`/`analyzeText` and
   `S3PresignService.getUploadedImage` to the injectable shapes. **This is the only
@@ -86,7 +104,7 @@ live in the router.
 - Validate the body with the shared schema via `safeParse`; on failure throw
   `validationError('…', { issues: parsed.error.issues })`.
 - Throwing `ApiError` is the canonical non-200 path; handlers return only success
-  results. The router will own `toErrorResponse`.
+  results. The router owns `toErrorResponse` (central catch in `makeRouter`).
 - Empty/absent body on `POST /uploads` is valid (defaults to `{}` → image/jpeg).
 
 ## Not yet decided / watch out
@@ -102,3 +120,9 @@ live in the router.
   usage. Not a human blocker, so no handoff.
 - Share creation (built) validates `checkReconstruction` **plus** `page.id` match
   before persisting, and is the **only** write path.
+- **`NOT_FOUND_CODE = 'not_found'`** (in `errors.ts`, exported) is the router's
+  unknown-route 404 code. Like `internal_error`, it is **intentionally outside** the
+  PRD `ErrorCode` enum — an unknown route is "no such endpoint" (transport), distinct
+  from resource-not-found states (`image_not_found`/`share_not_found`). So a 404 body
+  does NOT necessarily parse against the closed-enum `ErrorEnvelopeSchema`; assert it
+  structurally.

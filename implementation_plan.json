@@ -242,7 +242,7 @@
   {
     "taskId": "api-router",
     "description": "Wire all handlers into the API routing layer (mapping HTTP method + path to handler, JSON parsing, central error catch that emits the standard envelope and 500 for unexpected errors). Ensure routes match the API doc exactly.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "api-handler-health",
       "api-handler-uploads",
