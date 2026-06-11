@@ -2,8 +2,8 @@
 title: "@aya/api"
 type: package
 packages: [api]
-tasks: [api-package-scaffold, api-error-envelope, api-dynamodb-repository, api-s3-presign-service, api-short-url-service, api-handler-health, api-handler-uploads, api-handler-pages, api-handler-shares-create]
-summary: Transport-agnostic handlers (health, uploads, pages/scan, shares-create built; shares-resolve/router todo), ApiError→envelope mapping, DynamoDB repository, S3 presign, short-URL service.
+tasks: [api-package-scaffold, api-error-envelope, api-dynamodb-repository, api-s3-presign-service, api-short-url-service, api-handler-health, api-handler-uploads, api-handler-pages, api-handler-shares-create, api-handler-shares-resolve]
+summary: Transport-agnostic handlers (health, uploads, pages/scan, shares-create, shares-resolve built; router todo), ApiError→envelope mapping, DynamoDB repository, S3 presign, short-URL service.
 updated: 2026-06-11
 ---
 
@@ -16,10 +16,10 @@ live in the router.
 ## Status
 
 - Built: `errors.ts`, `repositories/`, `services/`, handlers for `GET /health`,
-  `POST /uploads`, `POST /pages` (the scan orchestration), and `POST /shares` (the
-  create handler — the only write path).
-- Todo: `api-handler-shares-resolve`, `api-router`. The `infra-*` tasks (SST) are all
-  todo.
+  `POST /uploads`, `POST /pages` (the scan orchestration), `POST /shares` (the
+  create handler — the only write path), and `GET /shares/{code}` (the resolve
+  read handler).
+- Todo: `api-router`. The `infra-*` tasks (SST) are all todo.
 
 ## What lives where
 
@@ -62,6 +62,16 @@ live in the router.
   pageId }`. Any validation failure throws `validationError` (400) **before** the
   persist call, so a rejected payload writes nothing. No share-code collision guard
   (unconditional `Put`; see share-flow page).
+- `src/handlers/shares-resolve.ts` — `makeSharesResolveHandler(deps)`: the
+  `GET /shares/{code}` **read** handler (writes nothing). Deps `{ repository }`
+  injected; `ShareResolver` is a structural subset of `PageRepository`
+  (`resolveShare(code) → AnalyzedPage | undefined`) so it unit-tests with a
+  recording fake. Flow: read `code` from `pathParameters` (absent/empty →
+  `validationError` 400, **before** any query) → `repository.resolveShare(code)`
+  → `undefined` (unknown / expired / dangling share whose page is gone) →
+  `shareNotFound` (404, `details: { code }`) → otherwise `200` with the
+  `AnalyzedPage` (`{ page, phrases }`, phrases already index-ordered by the repo).
+  Note `pathParameters?.['code']` (bracket access — `noPropertyAccessFromIndexSignature`).
 - `src/handlers/pages-wiring.ts` — `makeScanHandlerWithLlm(presign, opts)`: the live
   adapter binding the real `@aya/llm` `runOcr`/`analyzeText` and
   `S3PresignService.getUploadedImage` to the injectable shapes. **This is the only

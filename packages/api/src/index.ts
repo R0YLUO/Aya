@@ -66,3 +66,8 @@ export type {
   SharePersister,
   ShareUrlMinter,
 } from './handlers/shares.js';
+export { makeSharesResolveHandler } from './handlers/shares-resolve.js';
+export type {
+  SharesResolveHandlerDeps,
+  ShareResolver,
+} from './handlers/shares-resolve.js';

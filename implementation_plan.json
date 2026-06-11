@@ -231,7 +231,7 @@
   {
     "taskId": "api-handler-shares-resolve",
     "description": "Implement the GET /shares/{code} handler: resolve the code to a pageId, load the page and phrases via a single partition query, and return { page, phrases }; unknown code returns 404 share_not_found.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "api-dynamodb-repository",
       "api-error-envelope"
