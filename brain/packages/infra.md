@@ -2,16 +2,16 @@
 title: "@aya/infra"
 type: package
 packages: [api]
-tasks: [infra-package-scaffold, infra-dynamodb-table]
-summary: SST (Ion) app — app name/region/stage-aware safety, the aya-<stage> naming convention, and the DynamoDB single-table (string PK/SK, on-demand, no GSI). S3/API/Nextjs still todo.
+tasks: [infra-package-scaffold, infra-dynamodb-table, infra-s3-bucket]
+summary: SST (Ion) app — app name/region/stage-aware safety, the aya-<stage> naming convention, the DynamoDB single-table, and the ephemeral aya-uploads-<stage> S3 bucket (lifecycle + CORS). API/Nextjs still todo.
 updated: 2026-06-11
 ---
 
 # @aya/infra (as built)
 
 The SST app that defines Aya's AWS infrastructure. `run()` establishes the naming
-convention/stage safety and now provisions the **DynamoDB single-table**; S3, API
-Gateway, and web hosting are still todo.
+convention/stage safety and now provisions the **DynamoDB single-table** and the
+**ephemeral uploads S3 bucket**; API Gateway and web hosting are still todo.
 
 ## Layout
 
@@ -46,10 +46,25 @@ Gateway, and web hosting are still todo.
   suffixed name). The `apiEnvironment` map (`{ AYA_TABLE_NAME: table.name }`) is the
   contract `infra-api-gateway-lambda` spreads into the Lambda's `environment` (and
   `link: [table]` for IAM).
+- **S3 uploads bucket** (`infra-s3-bucket`) — `new sst.aws.Bucket("Uploads", …)`:
+  - `cors`: `allowMethods: ["PUT","POST","GET","HEAD"]`, `allowOrigins: ["*"]`,
+    `allowHeaders: ["*"]`, `exposeHeaders: ["ETag"]` — lets the client's presigned
+    PUT (and preflight) succeed. Origins stay `*` for now (auth out of scope; the URL
+    is already signed/short-lived); pinning web/app origins is a future task.
+  - `lifecycle: [{ id: "expire-uploads", prefix: "uploads/", expiresIn: "1 day" }]` —
+    auto-deletes the ephemeral image. The `uploads/` prefix matches the dated key the
+    presign service writes (`s3-presign-service.ts` → `uploads/YYYY/MM/DD/<uuid>.jpg`).
+    S3 expiration granularity is whole days, so `"1 day"` is the shortest "shortly
+    after creation" S3 supports.
+  - Physical name pinned to `aya-uploads-<stage>` via `transform.bucket.bucket`
+    (SST's logical name is `"Uploads"`; without the transform it auto-generates a
+    suffixed physical name).
+  - `AYA_UPLOAD_BUCKET: uploadBucket.name` was added to the `apiEnvironment` map
+    alongside `AYA_TABLE_NAME`; `infra-api-gateway-lambda` will `link: [table,
+    uploadBucket]` and spread the env into the Lambda.
 
 ## Still todo (downstream infra-* tasks add these inside `run()`)
 
-- `infra-s3-bucket` → `sst.aws.Bucket` (presigned PUT, lifecycle auto-delete).
 - `infra-api-gateway-lambda` → `sst.aws.ApiGatewayV2` + Functions (heavy `/pages`
   Lambda needs generous timeout/memory) wiring `@aya/api` handlers + env.
 - `infra-web-hosting` → `sst.aws.Nextjs` for `@aya/web`.
@@ -72,4 +87,9 @@ Gateway, and web hosting are still todo.
   to satisfy the on-demand requirement.
 - To pin the physical table name, use `transform.table.name`; `sst.aws.Dynamo`'s first
   arg is a *logical* name and SST otherwise auto-generates a stage-suffixed physical
-  name.
+  name. The S3 equivalent is `transform.bucket.bucket` (the underlying resource is
+  `s3.Bucket`, whose physical-name field is `bucket`).
+- `sst.aws.Bucket` (v4.15) exposes **native `cors` / `lifecycle` / `versioning`**
+  high-level args — no need to drop to `transform` for those. `lifecycle[].expiresIn`
+  is a `DurationDays` (whole-day minimum); sub-day S3 expiration isn't possible, so
+  "shortly after creation" bottoms out at `"1 day"`.

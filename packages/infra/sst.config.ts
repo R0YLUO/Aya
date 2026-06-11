@@ -92,27 +92,65 @@ export default $config({
       },
     });
 
+    // Ephemeral uploads bucket (specs/02-data-model.md, specs/07-monorepo-and-deployment.md).
+    //
+    //   - Clients PUT the photo directly via a presigned URL minted by the API
+    //     (packages/api/src/services/s3-presign-service.ts), under the dated
+    //     `uploads/YYYY/MM/DD/<uuid>.jpg` key. The object only has to survive
+    //     long enough for the stateless POST /pages scan to read it back, so a
+    //     lifecycle rule auto-deletes it.
+    //   - CORS must allow the browser/RN client's presigned PUT (and the HEAD/GET
+    //     preflight). Origins are left `*` for now — auth is out of scope and the
+    //     URL is already signed/short-lived; a future task can pin web/app origins.
+    //   - `transform.bucket.bucket` pins the physical name to the
+    //     `aya-uploads-<stage>` convention so AYA_UPLOAD_BUCKET is predictable
+    //     across stages (otherwise SST auto-generates a suffixed name).
+    //
+    // NOTE: S3 lifecycle expiration granularity is whole days (minimum 1 day);
+    // "shortly after creation" is therefore one day — the shortest S3 supports.
+    const uploadBucket = new sst.aws.Bucket("Uploads", {
+      cors: {
+        allowMethods: ["PUT", "POST", "GET", "HEAD"],
+        allowOrigins: ["*"],
+        allowHeaders: ["*"],
+        exposeHeaders: ["ETag"],
+      },
+      lifecycle: [
+        {
+          id: "expire-uploads",
+          prefix: "uploads/",
+          expiresIn: "1 day",
+        },
+      ],
+      transform: {
+        bucket: {
+          bucket: names.uploadBucket,
+        },
+      },
+    });
+
     // Environment injected into the API Lambda(s). The repository layer reads
-    // the table name from `AYA_TABLE_NAME` at the edge and constructs the
-    // PageRepository with it (brain/concepts/env-and-config.md). The Lambda
-    // itself is created by `infra-api-gateway-lambda`, which spreads this map
-    // into its `environment` and links the table for IAM access.
+    // the table name from `AYA_TABLE_NAME`, and the presign/scan path reads the
+    // bucket name from `AYA_UPLOAD_BUCKET`, at the edge (brain/concepts/env-and-config.md).
+    // The Lambda itself is created by `infra-api-gateway-lambda`, which spreads
+    // this map into its `environment` and links the table + bucket for IAM access.
     const apiEnvironment = {
       AYA_TABLE_NAME: table.name,
+      AYA_UPLOAD_BUCKET: uploadBucket.name,
     } as const;
 
     // Resources still to be added by the downstream infra-* tasks:
-    //   - infra-s3-bucket         → sst.aws.Bucket  (name: names.uploadBucket)
     //   - infra-api-gateway-lambda→ sst.aws.ApiGatewayV2 + Function
-    //                               (link: [table]; environment: apiEnvironment)
+    //                               (link: [table, uploadBucket]; environment: apiEnvironment)
     //   - infra-web-hosting       → sst.aws.Nextjs
 
     return {
       stage,
       tableName: table.name,
       tableArn: table.arn,
-      uploadBucketName: names.uploadBucket,
+      uploadBucketName: uploadBucket.name,
       apiTableNameEnv: apiEnvironment.AYA_TABLE_NAME,
+      apiUploadBucketEnv: apiEnvironment.AYA_UPLOAD_BUCKET,
     };
   },
 });

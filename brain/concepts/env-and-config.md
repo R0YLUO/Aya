@@ -34,7 +34,10 @@ defaulting to `process.env`, so tests pin values without mutating globals.
   `infra-dynamodb-table` exposes it as `AYA_TABLE_NAME` via the `apiEnvironment` map
   in `packages/infra/sst.config.ts`; `infra-api-gateway-lambda` will set it on the
   Lambda, and the handler edge will read it and construct `PageRepository`.
-- S3 bucket → `S3PresignService`.
+- S3 bucket → `S3PresignService`. Infra now *produces* this value too:
+  `infra-s3-bucket` exposes it as `AYA_UPLOAD_BUCKET` via the same `apiEnvironment`
+  map in `packages/infra/sst.config.ts`; `infra-api-gateway-lambda` will set it on
+  the Lambda, and the handler edge will read it and construct `S3PresignService`.
 - Web base URL (for share links) → `ShortUrlService`.
 - API base URL → mobile `AyaApiClient` (`config.baseUrl`; mobile has no env scheme
   yet — `mobile-share-flow` / app bootstrap will need one).

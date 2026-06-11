@@ -276,7 +276,7 @@
   {
     "taskId": "infra-s3-bucket",
     "description": "Define the ephemeral uploads S3 bucket (aya-uploads-<stage>) in SST with a lifecycle rule that auto-deletes objects shortly after creation, CORS allowing the presigned PUT from clients, and inject AYA_UPLOAD_BUCKET into the API Lambda environment.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "infra-package-scaffold"
     ],
