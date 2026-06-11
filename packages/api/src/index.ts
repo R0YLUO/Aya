@@ -79,3 +79,5 @@ export type {
   RouterResponse,
   RouterHandlers,
 } from './router.js';
+
+export { handler, buildRouter, toRouterRequest } from './lambda.js';

@@ -129,26 +129,92 @@ export default $config({
       },
     });
 
-    // Environment injected into the API Lambda(s). The repository layer reads
-    // the table name from `AYA_TABLE_NAME`, and the presign/scan path reads the
-    // bucket name from `AYA_UPLOAD_BUCKET`, at the edge (brain/concepts/env-and-config.md).
-    // The Lambda itself is created by `infra-api-gateway-lambda`, which spreads
-    // this map into its `environment` and links the table + bucket for IAM access.
+    // ---- Secrets & config the API Lambda needs (no literals; CLAUDE.md #7) ----
+    //
+    // True secrets (the Anthropic + LangSmith API keys) are SST Secrets — set
+    // out of band with `sst secret set <NAME> <value>` per stage and never
+    // committed. Model ids and the LangSmith project/toggle are non-secret
+    // *config*, sourced from the deploy environment with safe per-stage
+    // defaults so synthesis never depends on a committed account value.
+    const anthropicApiKey = new sst.Secret("AnthropicApiKey");
+    const langsmithApiKey = new sst.Secret("LangsmithApiKey");
+
+    // The public web reader's base URL (used to compose share links). Defaults
+    // to a stage-scoped placeholder for synthesis; the real value is set per
+    // stage via env (or, once infra-web-hosting lands, the Nextjs site URL).
+    const webBaseUrl =
+      process.env["AYA_WEB_BASE_URL"] ?? `https://${stage}.aya.example`;
+
+    // Environment injected into the API Lambda. The repository reads the table
+    // name from `AYA_TABLE_NAME`, the presign/scan path reads the bucket name
+    // from `AYA_UPLOAD_BUCKET`, the short-URL service reads `AYA_WEB_BASE_URL`,
+    // and @aya/llm reads the model ids + keys (brain/concepts/env-and-config.md).
+    // `link: [table, uploadBucket]` grants the Lambda least-privilege IAM to
+    // exactly those two resources (SST derives the policy from the links).
     const apiEnvironment = {
       AYA_TABLE_NAME: table.name,
       AYA_UPLOAD_BUCKET: uploadBucket.name,
+      AYA_WEB_BASE_URL: webBaseUrl,
+      // Model ids are config, not literals (CLAUDE.md #9): sourced from the
+      // deploy env. Placeholders keep synthesis self-contained; a real deploy
+      // sets the actual Claude ids per stage.
+      AYA_OCR_MODEL: process.env["AYA_OCR_MODEL"] ?? "set-AYA_OCR_MODEL",
+      AYA_ANALYSIS_MODEL:
+        process.env["AYA_ANALYSIS_MODEL"] ?? "set-AYA_ANALYSIS_MODEL",
+      ANTHROPIC_API_KEY: anthropicApiKey.value,
+      // LangSmith tracing — off unless explicitly enabled per stage. The key is
+      // a Secret; the project/toggle are non-secret config.
+      LANGCHAIN_TRACING_V2: process.env["LANGCHAIN_TRACING_V2"] ?? "false",
+      LANGCHAIN_API_KEY: langsmithApiKey.value,
+      LANGCHAIN_PROJECT: process.env["LANGCHAIN_PROJECT"] ?? `aya-${stage}`,
+      AYA_ENV: stage,
     } as const;
 
-    // Resources still to be added by the downstream infra-* tasks:
-    //   - infra-api-gateway-lambda→ sst.aws.ApiGatewayV2 + Function
-    //                               (link: [table, uploadBucket]; environment: apiEnvironment)
-    //   - infra-web-hosting       → sst.aws.Nextjs
+    // ---- HTTP API + the single API Lambda (specs/03, specs/07) ----------------
+    //
+    // One Lambda serves every route: the @aya/api router does method+path
+    // dispatch internally (packages/api/src/lambda.ts is the composition root +
+    // API Gateway v2 adapter). Each of the five product routes is declared
+    // explicitly (matching specs/03-api-design.md) and points at that handler.
+    //
+    // The heavy POST /pages route runs two Claude calls (~15s budget), so it
+    // gets a generous timeout — comfortably above the budget, under API
+    // Gateway's hard 29s integration limit — and raised memory for image
+    // handling. The other routes keep lightweight defaults.
+    const api = new sst.aws.ApiGatewayV2("Api");
+
+    // Shared Lambda config for the lightweight routes: links (least-privilege
+    // IAM to the table + bucket) and the env above. `handler` resolves to the
+    // built @aya/api entry point.
+    const apiHandler = "../api/src/lambda.handler";
+    const baseFn = {
+      link: [table, uploadBucket],
+      environment: apiEnvironment,
+    } as const;
+
+    // Heavy scan route: 25s timeout (> ~15s LLM budget, < 29s API GW limit) and
+    // 1024 MB memory for decoding/holding the uploaded image bytes.
+    const scanFn = {
+      ...baseFn,
+      timeout: "25 seconds",
+      memory: "1024 MB",
+    } as const;
+
+    api.route("POST /uploads", { handler: apiHandler, ...baseFn });
+    api.route("POST /pages", { handler: apiHandler, ...scanFn });
+    api.route("POST /shares", { handler: apiHandler, ...baseFn });
+    api.route("GET /shares/{code}", { handler: apiHandler, ...baseFn });
+    api.route("GET /health", { handler: apiHandler, ...baseFn });
+
+    // Resources still to be added by the downstream infra-* task:
+    //   - infra-web-hosting → sst.aws.Nextjs
 
     return {
       stage,
       tableName: table.name,
       tableArn: table.arn,
       uploadBucketName: uploadBucket.name,
+      apiUrl: api.url,
       apiTableNameEnv: apiEnvironment.AYA_TABLE_NAME,
       apiUploadBucketEnv: apiEnvironment.AYA_UPLOAD_BUCKET,
     };

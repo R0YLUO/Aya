@@ -25,22 +25,33 @@ defaulting to `process.env`, so tests pin values without mutating globals.
 | `LANGCHAIN_API_KEY`, `LANGCHAIN_PROJECT` | LangChain directly | LangSmith destination |
 | `AYA_ENV` | `llm/src/tracing.ts` | env tag on traces (defaults "dev") |
 | `AYA_VERSION` | `api/src/handlers/health.ts` | reported by GET /health (defaults "0.1.0") |
+| `AYA_TABLE_NAME` | `api/src/lambda.ts` (required) | DynamoDB table → `PageRepository` |
+| `AYA_UPLOAD_BUCKET` | `api/src/lambda.ts` (required) | S3 bucket → `S3PresignService` |
+| `AYA_WEB_BASE_URL` | `api/src/lambda.ts` (required) | share-link base → `ShortUrlService` |
 | `AYA_API_BASE_URL` | `web/src/lib/api.ts` (SSR) | backend base URL |
 | `NEXT_PUBLIC_AYA_API_BASE_URL` | `web/src/lib/api.ts` (fallback) | public backend base URL |
 
-## Injected-not-env (constructor params today; infra will wire them from env)
+## The Lambda edge now reads these (was "injected-not-env")
 
-- DynamoDB table name → `PageRepository`. Infra now *produces* this value:
-  `infra-dynamodb-table` exposes it as `AYA_TABLE_NAME` via the `apiEnvironment` map
-  in `packages/infra/sst.config.ts`; `infra-api-gateway-lambda` will set it on the
-  Lambda, and the handler edge will read it and construct `PageRepository`.
-- S3 bucket → `S3PresignService`. Infra now *produces* this value too:
-  `infra-s3-bucket` exposes it as `AYA_UPLOAD_BUCKET` via the same `apiEnvironment`
-  map in `packages/infra/sst.config.ts`; `infra-api-gateway-lambda` will set it on
-  the Lambda, and the handler edge will read it and construct `S3PresignService`.
-- Web base URL (for share links) → `ShortUrlService`.
+`api/src/lambda.ts` (`buildRouter`) is the edge that resolves the three resource
+vars and constructs the services — closing the loop the earlier infra tasks set up:
+
+- `AYA_TABLE_NAME` → `PageRepository` (produced by `infra-dynamodb-table`).
+- `AYA_UPLOAD_BUCKET` → `S3PresignService` (produced by `infra-s3-bucket`).
+- `AYA_WEB_BASE_URL` → `ShortUrlService` (share-link base). Added by
+  `infra-api-gateway-lambda`; non-secret config with a `https://<stage>.aya.example`
+  synthesis placeholder.
+
+`infra-api-gateway-lambda` sets all of the above on the Lambda's `environment`,
+plus the model/LangSmith vars (`AYA_OCR_MODEL`, `AYA_ANALYSIS_MODEL`,
+`LANGCHAIN_*`, `AYA_ENV`) `@aya/llm` reads, with `ANTHROPIC_API_KEY` /
+`LANGCHAIN_API_KEY` sourced from `sst.Secret`s (`AnthropicApiKey`,
+`LangsmithApiKey`).
+
+Still injected-not-env elsewhere:
+
 - API base URL → mobile `AyaApiClient` (`config.baseUrl`; mobile has no env scheme
   yet — `mobile-share-flow` / app bootstrap will need one).
 
-The `infra-*` tasks (all todo) own actually setting these in Lambda/hosting env.
+The only remaining infra task (`infra-web-hosting`, todo) wires the web hosting env.
 **Update this table whenever a variable is added or renamed.**

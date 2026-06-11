@@ -2,16 +2,17 @@
 title: "@aya/infra"
 type: package
 packages: [api]
-tasks: [infra-package-scaffold, infra-dynamodb-table, infra-s3-bucket]
-summary: SST (Ion) app — app name/region/stage-aware safety, the aya-<stage> naming convention, the DynamoDB single-table, and the ephemeral aya-uploads-<stage> S3 bucket (lifecycle + CORS). API/Nextjs still todo.
+tasks: [infra-package-scaffold, infra-dynamodb-table, infra-s3-bucket, infra-api-gateway-lambda]
+summary: SST (Ion) app — app name/region/stage-aware safety, the aya-<stage> naming convention, the DynamoDB single-table, the ephemeral aya-uploads-<stage> S3 bucket (lifecycle + CORS), and the HTTP API + single scan Lambda (five routes, linked least-privilege, secrets/env wired). Nextjs hosting still todo.
 updated: 2026-06-11
 ---
 
 # @aya/infra (as built)
 
 The SST app that defines Aya's AWS infrastructure. `run()` establishes the naming
-convention/stage safety and now provisions the **DynamoDB single-table** and the
-**ephemeral uploads S3 bucket**; API Gateway and web hosting are still todo.
+convention/stage safety and provisions the **DynamoDB single-table**, the
+**ephemeral uploads S3 bucket**, and the **HTTP API + scan Lambda**; web hosting
+(Nextjs) is the only resource still todo.
 
 ## Layout
 
@@ -63,10 +64,30 @@ convention/stage safety and now provisions the **DynamoDB single-table** and the
     alongside `AYA_TABLE_NAME`; `infra-api-gateway-lambda` will `link: [table,
     uploadBucket]` and spread the env into the Lambda.
 
-## Still todo (downstream infra-* tasks add these inside `run()`)
+- **HTTP API + scan Lambda** (`infra-api-gateway-lambda`) —
+  `new sst.aws.ApiGatewayV2("Api")` plus five explicit `api.route(...)` calls
+  matching specs/03 (`POST /uploads`, `POST /pages`, `POST /shares`,
+  `GET /shares/{code}`, `GET /health`). **All five point at one handler** —
+  `"../api/src/lambda.handler"` (path relative to `sst.config.ts` = the infra
+  package); the `@aya/api` router does method+path dispatch internally, so one
+  Lambda serves every route. Per-route config:
+  - The heavy **`POST /pages`** route gets `timeout: "25 seconds"`
+    (> ~15s LLM budget, < API Gateway's hard 29s limit) and `memory: "1024 MB"`
+    for image bytes. The other four use a shared `baseFn` (default timeout/memory).
+  - **IAM**: every route's function `link: [table, uploadBucket]` — SST derives a
+    least-privilege policy granting exactly the table + bucket (no wildcard grants).
+  - **Env/secrets** (`apiEnvironment`, spread into every route's `environment`):
+    `AYA_TABLE_NAME`/`AYA_UPLOAD_BUCKET` from the linked resources' `.name`;
+    `AYA_WEB_BASE_URL` (config, `process.env` w/ `https://<stage>.aya.example`
+    placeholder); `AYA_OCR_MODEL`/`AYA_ANALYSIS_MODEL` (config, placeholders);
+    `ANTHROPIC_API_KEY`/`LANGCHAIN_API_KEY` from **`new sst.Secret(...)`**
+    (`AnthropicApiKey`, `LangsmithApiKey` — set via `sst secret set` per stage,
+    never committed); `LANGCHAIN_TRACING_V2` (default `"false"`),
+    `LANGCHAIN_PROJECT` (default `aya-<stage>`), `AYA_ENV` (= stage). `api.url` is
+    a new stack output.
 
-- `infra-api-gateway-lambda` → `sst.aws.ApiGatewayV2` + Functions (heavy `/pages`
-  Lambda needs generous timeout/memory) wiring `@aya/api` handlers + env.
+## Still todo (downstream infra-* task adds this inside `run()`)
+
 - `infra-web-hosting` → `sst.aws.Nextjs` for `@aya/web`.
 
 ## Gotchas
@@ -93,3 +114,15 @@ convention/stage safety and now provisions the **DynamoDB single-table** and the
   high-level args — no need to drop to `transform` for those. `lifecycle[].expiresIn`
   is a `DurationDays` (whole-day minimum); sub-day S3 expiration isn't possible, so
   "shortly after creation" bottoms out at `"1 day"`.
+- **Lambda handler path is relative to `sst.config.ts`** (the infra package dir),
+  not the repo root — hence `"../api/src/lambda.handler"`. SST/esbuild bundles the
+  `@aya/api` workspace from source (no prebuilt `dist` needed for synthesis).
+- **Secrets vs config**: only true secrets (API keys) use `new sst.Secret("Name")`
+  → `.value` in the env map; they must be set with `sst secret set Name <v>` per
+  stage *before* deploy or the Lambda env resolves empty. Model ids / web base URL
+  are non-secret **config** read from `process.env` with placeholder defaults so
+  synthesis never needs them. `void`-style placeholders aren't used here — the
+  defaults are real strings (`set-AYA_OCR_MODEL`, `https://<stage>.aya.example`).
+- **One Lambda, five routes**: declaring the same handler on five `api.route()`
+  calls is intentional — the `@aya/api` router dispatches. Don't split into five
+  functions; that would duplicate cold starts and the composition root.

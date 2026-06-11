@@ -2,8 +2,8 @@
 title: "@aya/api"
 type: package
 packages: [api]
-tasks: [api-package-scaffold, api-error-envelope, api-dynamodb-repository, api-s3-presign-service, api-short-url-service, api-handler-health, api-handler-uploads, api-handler-pages, api-handler-shares-create, api-handler-shares-resolve, api-router]
-summary: Transport-agnostic handlers + router (method+path → handler, JSON parse, central error catch → standard envelope/500), ApiError→envelope mapping, DynamoDB repository, S3 presign, short-URL service.
+tasks: [api-package-scaffold, api-error-envelope, api-dynamodb-repository, api-s3-presign-service, api-short-url-service, api-handler-health, api-handler-uploads, api-handler-pages, api-handler-shares-create, api-handler-shares-resolve, api-router, infra-api-gateway-lambda]
+summary: Transport-agnostic handlers + router (method+path → handler, JSON parse, central error catch → standard envelope/500), ApiError→envelope mapping, DynamoDB repository, S3 presign, short-URL service, and the Lambda composition root + API Gateway v2 adapter.
 updated: 2026-06-11
 ---
 
@@ -11,17 +11,19 @@ updated: 2026-06-11
 
 Lambda-destined backend. Handlers are transport-agnostic functions; the **router**
 (`src/router.ts`) maps method+path → handler, parses the JSON body, and owns the
-central error catch. The API Gateway/Lambda adapter (an `infra-*` task) still has to
-convert a proxy event into a `RouterRequest` and back.
+central error catch. `src/lambda.ts` is the **composition root + API Gateway v2
+adapter**: it reads env, builds the real services + router, and converts a proxy
+event ↔ `RouterRequest`/`RouterResponse`. It is the Lambda the SST app deploys.
 
 ## Status
 
 - Built: `errors.ts`, `repositories/`, `services/`, handlers for `GET /health`,
   `POST /uploads`, `POST /pages` (the scan orchestration), `POST /shares` (the
   create handler — the only write path), and `GET /shares/{code}` (the resolve
-  read handler), plus `router.ts` wiring them all together.
-- Todo: the `infra-*` tasks (SST) — including the Lambda event ↔ RouterRequest
-  adapter — are all todo.
+  read handler), `router.ts` wiring them all together, and `lambda.ts` (the
+  composition root + API Gateway v2 adapter the infra app deploys).
+- Verified with mocks/stubs only: no real AWS path has run (see the
+  [aws-account handoff](../handoffs/aws-account.md)).
 
 ## What lives where
 
@@ -90,6 +92,21 @@ convert a proxy event into a `RouterRequest` and back.
   thrown by any handler keeps its status/code and anything else becomes a 500
   `internal_error`; the router itself never throws. Unknown method+path → `notFound()`
   → 404 with code `not_found` (a constant, see below).
+- `src/lambda.ts` — the **composition root + API Gateway v2 (HTTP API) adapter**,
+  exported as `handler` (and `buildRouter`/`toRouterRequest` for tests). It is the
+  *only* place `@aya/api` instantiates real AWS clients (`DynamoDBDocumentClient`,
+  `S3Client`) and reads the environment. `buildRouter(env)`: `requireEnv` for
+  `AYA_TABLE_NAME`/`AYA_UPLOAD_BUCKET`/`AYA_WEB_BASE_URL` → constructs
+  `PageRepository`, `S3PresignService`, `ShortUrlService` → wires the five handlers
+  (scan via `makeScanHandlerWithLlm(presign, { env })`, which lets `@aya/llm` read
+  its own model/key env) into `makeRouter`. `toRouterRequest(event)` maps
+  `requestContext.http.method` + `rawPath` and base64-decodes the body when
+  `isBase64Encoded`. `handler` **lazily** builds+caches the router on first
+  invocation (`cachedRouter ??= buildRouter()`) — *not* at module scope — so
+  importing the module in unit tests doesn't require the Lambda env; it returns a
+  JSON proxy result (`content-type: application/json`). Five tests in
+  `lambda.test.ts` cover the adapter + env validation + health/404 dispatch with a
+  stub event.
 - `src/handlers/pages-wiring.ts` — `makeScanHandlerWithLlm(presign, opts)`: the live
   adapter binding the real `@aya/llm` `runOcr`/`analyzeText` and
   `S3PresignService.getUploadedImage` to the injectable shapes. **This is the only

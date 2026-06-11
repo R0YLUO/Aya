@@ -3,7 +3,7 @@ title: Scan flow (end to end)
 type: concept
 packages: [mobile, api, llm]
 tasks: [mobile-scan-flow, api-handler-uploads, api-s3-presign-service, llm-run-ocr, llm-analyze-text, api-handler-pages]
-summary: Photo → presign → S3 PUT → POST /pages (OCR + analysis, stateless) → AnalyzedPage saved locally. Full server path + router built; only the infra/deploy remains.
+summary: Photo → presign → S3 PUT → POST /pages (OCR + analysis, stateless) → AnalyzedPage saved locally. Full server path + router + Lambda edge + SST API/Lambda built; only the AWS deploy remains (aws-account handoff).
 updated: 2026-06-11
 ---
 
@@ -24,10 +24,13 @@ mobile runScan()                       api                              llm
 - Client-side orchestration (`packages/mobile/src/scan/runScan.ts`) is **done**: it
   reads image bytes exactly once, makes exactly one `POST /pages` call, persists the
   result locally, throws typed `ApiError`s upward.
-- Server side, `POST /uploads` and `POST /pages` both exist, and the **router**
-  (`api-router`, `api/src/router.ts`) now maps method+path → handler, parses the JSON
-  body, and owns the central `toErrorResponse` catch. The remaining gap is the
-  `infra-*` SST deploy + the Lambda event ↔ `RouterRequest` adapter.
+- Server side, `POST /uploads` and `POST /pages` both exist, the **router**
+  (`api-router`, `api/src/router.ts`) maps method+path → handler, and the **Lambda
+  edge** (`infra-api-gateway-lambda`, `api/src/lambda.ts`) now builds the real
+  services from env and adapts the API Gateway v2 event ↔ `RouterRequest`. The SST
+  app (`infra-api-gateway-lambda`) wires the HTTP API + scan Lambda (25s/1024 MB).
+  The remaining gap is the AWS deploy itself, gated on the
+  [aws-account handoff](../handoffs/aws-account.md).
 
 ## Contracts the pages handler must honour (already fixed by built code)
 

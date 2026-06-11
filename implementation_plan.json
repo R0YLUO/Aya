@@ -286,7 +286,7 @@
   {
     "taskId": "infra-api-gateway-lambda",
     "description": "Define the HTTP API Gateway and Lambda functions in SST for the five routes, with the POST /pages function given a generous timeout (above the ~15s LLM budget, under the 29s API Gateway limit) and adequate memory, plus IAM grants for the table and bucket and the model/LangSmith env vars.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "infra-dynamodb-table",
       "infra-s3-bucket"
