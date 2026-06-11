@@ -1,0 +1,36 @@
+{
+  "name": "@aya/evals",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Aya eval suite: versioned datasets + deterministic scorers (CER, boundary F1, reconstruction) run against the same runOcr/analyzeText the production API uses, recorded in LangSmith when its env is present (specs/06-evals.md).",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "tsc -p tsconfig.test.json && node --test \"dist-test/**/*.test.js\"",
+    "eval": "tsc -p tsconfig.json && node dist/run-evals.js",
+    "clean": "rm -rf dist dist-test .turbo"
+  },
+  "dependencies": {
+    "@aya/llm": "*",
+    "@aya/shared": "*",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "langsmith": "^0.3.0",
+    "typescript": "^5.8.3"
+  }
+}

@@ -56,7 +56,9 @@ past this package.
 - Output is re-parsed with the Zod schema **even though** the runner already
   validated — never return unvalidated model output.
 - Anything touching prompts/schemas/model config requires an eval run (CLAUDE.md
-  golden rule #2) — evals package not yet scaffolded (tasks `evals-*`).
+  golden rule #2). The eval suite now exists — [@aya/evals](./evals.md) scores `runOcr`
+  / `analyzeText` via injected runners (offline) or the real key; a real LangSmith
+  dataset run stays gated on the langsmith-account handoff.
 
 ## Gotchas
 

@@ -431,7 +431,7 @@
   {
     "taskId": "evals-package-scaffold",
     "description": "Create the packages/evals workspace package depending on @aya/llm, with a datasets/ directory, an eval runner entrypoint, LangSmith dataset wiring, and an `npm run eval` script as referenced in the docs.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "llm-run-ocr",
       "llm-analyze-text"

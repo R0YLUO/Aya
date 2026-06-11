@@ -1,0 +1,31 @@
+{
+  "name": "analysis",
+  "version": "v1",
+  "description": "Segmentation/analysis set: fullText paired with gold phrase boundaries (the `original` of each word token, in order) and expected pinyin, with attention to four-character idioms kept whole. Reconstruction (boundaries.join('') === fullText) holds for every example.",
+  "examples": [
+    {
+      "id": "analysis-idiom-001",
+      "pageId": "eval-page-001",
+      "fullText": "他做事总是画蛇添足。",
+      "goldBoundaries": ["他", "做事", "总是", "画蛇添足", "。"],
+      "goldPinyin": {
+        "他": "tā",
+        "做事": "zuò shì",
+        "总是": "zǒng shì",
+        "画蛇添足": "huà shé tiān zú"
+      }
+    },
+    {
+      "id": "analysis-compound-001",
+      "pageId": "eval-page-002",
+      "fullText": "今天天气很好。",
+      "goldBoundaries": ["今天", "天气", "很", "好", "。"],
+      "goldPinyin": {
+        "今天": "jīn tiān",
+        "天气": "tiān qì",
+        "很": "hěn",
+        "好": "hǎo"
+      }
+    }
+  ]
+}

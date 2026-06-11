@@ -1,0 +1,27 @@
+{
+  "name": "ocr",
+  "version": "v1",
+  "description": "OCR set: gold fullText per page image. Image refs are placeholders until real photos land (see the anthropic-api-key / langsmith handoffs). Includes the hard PRD cases (unreadable, no Chinese text).",
+  "examples": [
+    {
+      "id": "ocr-clear-001",
+      "image": { "kind": "url", "url": "s3://aya-eval-fixtures/ocr/clear-001.jpg" },
+      "expected": { "status": "ok", "fullText": "今天天气很好。" }
+    },
+    {
+      "id": "ocr-clear-002",
+      "image": { "kind": "url", "url": "s3://aya-eval-fixtures/ocr/clear-002.jpg" },
+      "expected": { "status": "ok", "fullText": "他说：“画蛇添足。”" }
+    },
+    {
+      "id": "ocr-unreadable-001",
+      "image": { "kind": "url", "url": "s3://aya-eval-fixtures/ocr/blurry-001.jpg" },
+      "expected": { "status": "unreadable", "fullText": "" }
+    },
+    {
+      "id": "ocr-no-chinese-001",
+      "image": { "kind": "url", "url": "s3://aya-eval-fixtures/ocr/english-001.jpg" },
+      "expected": { "status": "no_chinese_text", "fullText": "" }
+    }
+  ]
+}
