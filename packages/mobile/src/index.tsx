@@ -50,8 +50,17 @@ export {
   isInteractive,
   readerTokens,
   reconstructText,
+  PhrasePopupSheet,
+  openPhrasePopup,
+  closePhrasePopup,
+  closedPhrasePopup,
+  isPhrasePopupOpen,
+  phrasePopupContent,
   type ReaderViewProps,
   type ReaderToken,
+  type PhrasePopupSheetProps,
+  type PhrasePopupState,
+  type PhrasePopupContent,
 } from './reader/index.js';
 
 export {

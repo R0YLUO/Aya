@@ -410,7 +410,7 @@
   {
     "taskId": "mobile-phrase-popup",
     "description": "Implement the tap-triggered phrase popup/bottom sheet on mobile showing pinyin, contextual translation, and contextual meaning, dismissible by tapping outside, swiping down, or a close button, using only locally stored analysis (instant, no network).",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "mobile-reader-view"
     ],

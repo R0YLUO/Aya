@@ -3,7 +3,7 @@ title: Run the mobile app on a simulator/device
 type: handoff
 status: open
 packages: [mobile]
-tasks: [mobile-camera-capture, mobile-scan-flow, mobile-local-store, mobile-reader-view, mobile-error-states]
+tasks: [mobile-camera-capture, mobile-scan-flow, mobile-local-store, mobile-reader-view, mobile-error-states, mobile-phrase-popup]
 summary: All mobile work is verified via framework-free unit tests only; the RN app has never been launched, and camera capture needs a real device.
 updated: 2026-06-11
 ---
@@ -31,6 +31,13 @@ Walk PRD Story 1 on a device: open camera → capture → preview → retake/con
 Also walk PRD Story 2: render an `AnalyzedPage` in `ReaderView` and confirm phrases
 are legibly sized, line breaks are preserved, the page scrolls smoothly, and only
 pinyin-bearing phrases are tappable (the underline affordance shows).
+Also walk PRD Story 3: tap an interactive phrase and confirm `PhrasePopupSheet`
+opens instantly showing pinyin / translation / contextual meaning, and that it
+dismisses via all three affordances — tap the dimmed backdrop, swipe the sheet
+down past the threshold, and press the ✕ close button — while tapping a
+non-tappable token does nothing. (The open/dismiss logic and field selection are
+unit-tested in `phrasePopup.test.ts`; the `Modal`/`PanResponder` gesture
+rendering is what remains device-unverified.)
 Also confirm the scan-error UI: force each scan error code and verify
 `ScanErrorScreen` shows the PRD copy inline (no crash) and the CTA routes
 correctly — Retake returns to the camera; Retry re-runs upload+scan.
