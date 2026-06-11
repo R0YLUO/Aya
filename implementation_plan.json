@@ -380,7 +380,7 @@
   {
     "taskId": "mobile-error-states",
     "description": "Implement mobile error handling for the scan path mapping API error codes to PRD copy with retry/retake CTAs: image_unreadable -> 'Photo unclear, please retake'; no_chinese_text -> 'No Chinese text found, please try again'; network failure -> retry; analysis_failed -> offer retry.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "mobile-scan-flow"
     ],

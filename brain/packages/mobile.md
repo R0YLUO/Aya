@@ -2,8 +2,8 @@
 title: "@aya/mobile"
 type: package
 packages: [mobile]
-tasks: [mobile-package-scaffold, mobile-camera-capture, mobile-scan-flow, mobile-local-store, mobile-reader-view]
-summary: RN app — typed API client, camera/scan state machines, local-first page store, tappable reader view. Error-states, phrase popup, share flow todo.
+tasks: [mobile-package-scaffold, mobile-camera-capture, mobile-scan-flow, mobile-local-store, mobile-reader-view, mobile-error-states]
+summary: RN app — typed API client, camera/scan state machines, local-first page store, tappable reader view, inline scan-error UI. Phrase popup, share flow todo.
 updated: 2026-06-11
 ---
 
@@ -15,8 +15,9 @@ orchestration) with thin RN screens over it.
 
 ## Status
 
-- Done: scaffold, camera capture, scan flow, local store, reader view.
-- Todo: `mobile-error-states`, `mobile-phrase-popup`, `mobile-share-flow`.
+- Done: scaffold, camera capture, scan flow, local store, reader view,
+  error states.
+- Todo: `mobile-phrase-popup`, `mobile-share-flow`.
 
 ## What lives where
 
@@ -38,9 +39,17 @@ orchestration) with thin RN screens over it.
   with `AnalyzedPageSchema` on **both** write and read; corrupt entries decode to
   `null` and are skipped; `listPages()` sorts most-recent-first. Only analysed text is
   stored, never images.
-- `src/errors/messages.ts` — `ScanErrorCode → {message, cta, ctaLabel}` with PRD copy
-  verbatim (`image_unreadable`/`no_chinese_text` → "Retake"; `network_error`/
-  `analysis_failed` → "Retry"). Task `mobile-error-states` builds the UI over this.
+- `src/errors/` — scan-path error UI (task `mobile-error-states`).
+  `messages.ts`: `presentScanError(code) → {message, cta, ctaLabel}` (PRD copy
+  verbatim — `image_unreadable`/`no_chinese_text`/`image_not_found` → "Retake";
+  `network_error`/`analysis_failed`/`validation_error`/`share_not_found` →
+  "Retry"), plus `recoveryHandler(code, {onRetake, onRetry})` which is the one
+  place CTA→handler routing lives (never branch on the message string).
+  `ScanErrorScreen.tsx` is the thin inline view: renders the message + a single
+  CTA button wired through `recoveryHandler`. It consumes the `ScanErrorCode`
+  the scan-flow surfaces (`useScanFlow` → `ScanState{status:'error',code}`), so
+  failures render inline, never crash. Driven by the same code seam the
+  `ApiError.code`/`network_error` synthesis produces.
 - `src/reader/` — PRD Story 2 reader. `tokens.ts` is the framework-free core:
   `readerTokens(page)` sorts phrases by `index` (defensively) and tags each as
   `interactive` iff `pinyin !== null`; `reconstructText(page)` joins `original`s to

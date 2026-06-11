@@ -2,7 +2,7 @@
 title: Error handling across the stack
 type: concept
 packages: [shared, api, web, mobile]
-tasks: [shared-api-contracts, api-error-envelope, mobile-scan-flow]
+tasks: [shared-api-contracts, api-error-envelope, mobile-scan-flow, mobile-error-states]
 summary: One envelope, one closed ErrorCode enum, three deliberately separate ApiError classes, and two codes that intentionally live outside the enum.
 updated: 2026-06-10
 ---
@@ -53,6 +53,9 @@ package. Keep them separate.
 
 - Clients branch on `code`, never on message strings.
 - Mobile UI copy + recovery CTA come exclusively from
-  `mobile/src/errors/messages.ts` (retake vs retry per PRD).
+  `mobile/src/errors/messages.ts` (retake vs retry per PRD). The inline
+  `ScanErrorScreen.tsx` renders that copy and routes its single CTA through
+  `recoveryHandler(code, {onRetake, onRetry})` — the one place CTA→handler
+  routing lives — so failures surface inline rather than crashing.
 - Web: only `share_not_found` renders the friendly not-found state; everything else
   must propagate (an outage is not a 404).

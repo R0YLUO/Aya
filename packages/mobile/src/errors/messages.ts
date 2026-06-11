@@ -67,3 +67,18 @@ const PRESENTATIONS: Record<ScanErrorCode, ScanErrorPresentation> = {
 export function presentScanError(code: ScanErrorCode): ScanErrorPresentation {
   return PRESENTATIONS[code];
 }
+
+/**
+ * Routes an error code's recovery CTA to the right handler: `retake` sends the
+ * user back to the camera, `retry` re-runs upload + scan. The screen and any
+ * other UI must use this so routing stays in one place (never branch on the
+ * message string).
+ */
+export function recoveryHandler(
+  code: ScanErrorCode,
+  handlers: { onRetake: () => void; onRetry: () => void },
+): () => void {
+  return presentScanError(code).cta === 'retake'
+    ? handlers.onRetake
+    : handlers.onRetry;
+}

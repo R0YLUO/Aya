@@ -53,3 +53,13 @@ export {
   type ReaderViewProps,
   type ReaderToken,
 } from './reader/index.js';
+
+export {
+  ScanErrorScreen,
+  presentScanError,
+  recoveryHandler,
+  type ScanErrorScreenProps,
+  type ScanErrorCode,
+  type ScanErrorPresentation,
+  type RecoveryCta,
+} from './errors/index.js';

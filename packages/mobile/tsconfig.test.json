@@ -32,6 +32,7 @@
     "src/store/LocalPageStore.test.ts",
     "src/scan/runScan.test.ts",
     "src/camera/captureReducer.test.ts",
-    "src/reader/tokens.test.ts"
+    "src/reader/tokens.test.ts",
+    "src/errors/messages.test.ts"
   ]
 }
