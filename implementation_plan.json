@@ -266,7 +266,7 @@
   {
     "taskId": "infra-dynamodb-table",
     "description": "Define the DynamoDB single-table (aya-<stage>) in SST with PK/SK schema, on-demand billing, and an optional (disabled-by-default) TTL attribute, and inject AYA_TABLE_NAME into the API Lambda environment.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "infra-package-scaffold"
     ],

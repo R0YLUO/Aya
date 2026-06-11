@@ -30,7 +30,10 @@ defaulting to `process.env`, so tests pin values without mutating globals.
 
 ## Injected-not-env (constructor params today; infra will wire them from env)
 
-- DynamoDB table name → `PageRepository`.
+- DynamoDB table name → `PageRepository`. Infra now *produces* this value:
+  `infra-dynamodb-table` exposes it as `AYA_TABLE_NAME` via the `apiEnvironment` map
+  in `packages/infra/sst.config.ts`; `infra-api-gateway-lambda` will set it on the
+  Lambda, and the handler edge will read it and construct `PageRepository`.
 - S3 bucket → `S3PresignService`.
 - Web base URL (for share links) → `ShortUrlService`.
 - API base URL → mobile `AyaApiClient` (`config.baseUrl`; mobile has no env scheme

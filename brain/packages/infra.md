@@ -2,15 +2,16 @@
 title: "@aya/infra"
 type: package
 packages: [api]
-tasks: [infra-package-scaffold]
-summary: SST (Ion) app scaffold — app name/region/stage-aware safety + the aya-<stage> / aya-uploads-<stage> naming convention. Resources (Dynamo/S3/API/Nextjs) still todo.
+tasks: [infra-package-scaffold, infra-dynamodb-table]
+summary: SST (Ion) app — app name/region/stage-aware safety, the aya-<stage> naming convention, and the DynamoDB single-table (string PK/SK, on-demand, no GSI). S3/API/Nextjs still todo.
 updated: 2026-06-11
 ---
 
 # @aya/infra (as built)
 
-The SST app that defines Aya's AWS infrastructure. Currently a **scaffold** —
-`run()` establishes config but provisions no resources yet.
+The SST app that defines Aya's AWS infrastructure. `run()` establishes the naming
+convention/stage safety and now provisions the **DynamoDB single-table**; S3, API
+Gateway, and web hosting are still todo.
 
 ## Layout
 
@@ -31,12 +32,23 @@ The SST app that defines Aya's AWS infrastructure. Currently a **scaffold** —
   other stage is `removal: "remove"` (scale-to-zero/cheap teardown).
 - **Naming convention** (in `run()`, the contract downstream infra-* tasks consume):
   `table = aya-<stage>`, `uploadBucket = aya-uploads-<stage>`. Returned as outputs
-  (`stage`, `tableName`, `uploadBucketName`).
+  (`stage`, `tableName`, `tableArn`, `uploadBucketName`, `apiTableNameEnv`).
+
+## Resources provisioned
+
+- **DynamoDB table** (`infra-dynamodb-table`) — `new sst.aws.Dynamo("Table", …)`:
+  `fields: { PK: "string", SK: "string" }` (uppercase, to match the attribute names
+  the repository writes in `keys.ts`), `primaryIndex { hashKey: PK, rangeKey: SK }`,
+  **no** `globalIndexes`/`localIndexes` (single-table, three access patterns — see
+  [dynamodb-single-table](../concepts/dynamodb-single-table.md)). Billing is
+  `PAY_PER_REQUEST` (the component's default — scale-to-zero). The physical name is
+  pinned to `aya-<stage>` via `transform.table.name` (otherwise SST auto-generates a
+  suffixed name). The `apiEnvironment` map (`{ AYA_TABLE_NAME: table.name }`) is the
+  contract `infra-api-gateway-lambda` spreads into the Lambda's `environment` (and
+  `link: [table]` for IAM).
 
 ## Still todo (downstream infra-* tasks add these inside `run()`)
 
-- `infra-dynamodb-table` → `sst.aws.Dynamo` (string PK+SK, on-demand, no GSI — see
-  [dynamodb-single-table](../concepts/dynamodb-single-table.md)).
 - `infra-s3-bucket` → `sst.aws.Bucket` (presigned PUT, lifecycle auto-delete).
 - `infra-api-gateway-lambda` → `sst.aws.ApiGatewayV2` + Functions (heavy `/pages`
   Lambda needs generous timeout/memory) wiring `@aya/api` handlers + env.
@@ -51,3 +63,13 @@ The SST app that defines Aya's AWS infrastructure. Currently a **scaffold** —
   `noPropertyAccessFromIndexSignature` in the base tsconfig.
 - Verification is **synthesis-only**: `sst diff` reaches AWS-credentials refresh and
   stops (no account yet — see [aws-account handoff](../handoffs/aws-account.md)).
+- **TTL is disabled by default**: `sst.aws.Dynamo` only enables TTL when you pass the
+  `ttl: "<attr>"` arg; omitting it leaves TTL off. The convention name we'd use is
+  recorded in a `TTL_ATTRIBUTE = "expiresAt"` const in `run()` so a future task can
+  enable it additively without re-deciding. (`void TTL_ATTRIBUTE` keeps the unused
+  const from tripping lint.)
+- **`PAY_PER_REQUEST` is the default** for `sst.aws.Dynamo` — no `billing` arg needed
+  to satisfy the on-demand requirement.
+- To pin the physical table name, use `transform.table.name`; `sst.aws.Dynamo`'s first
+  arg is a *logical* name and SST otherwise auto-generates a stage-suffixed physical
+  name.

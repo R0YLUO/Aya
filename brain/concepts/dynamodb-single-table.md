@@ -36,12 +36,16 @@ One table, three entity types (`packages/api/src/repositories/keys.ts`):
 - Writes happen only via the share flow (golden rule #6). The repository trusts the
   caller to have run the [reconstruction check](./reconstruction-invariant.md).
 
-## For the infra tasks (todo)
+## Provisioned by infra (`infra-dynamodb-table`, done)
 
-`infra-dynamodb-table` must provision: string PK + string SK, on-demand billing
-(scale-to-zero north star), name passed to the API via env. No GSIs needed. Phrase
-index width is fixed at 6 (`PHRASE_INDEX_WIDTH`) — pages are book pages, so >999,999
-tokens is not a real case.
+`packages/infra/sst.config.ts` provisions the table as `sst.aws.Dynamo("Table", …)`:
+string `pk` + string `sk`, on-demand (`PAY_PER_REQUEST`) billing, no GSIs, physical
+name pinned to `aya-<stage>`, and `AYA_TABLE_NAME` exposed via the `apiEnvironment`
+map for the future API Lambda (see [@aya/infra](../packages/infra.md)). The key
+attribute names are UPPERCASE `PK`/`SK` to match exactly what the repository writes
+(`keys.ts` — DynamoDB attribute names are case-sensitive); the repository builds the
+key *values* (`PAGE#…` / `PHRASE#…`). Phrase index width is fixed at
+6 (`PHRASE_INDEX_WIDTH`) — pages are book pages, so >999,999 tokens is not a real case.
 
 ## Watch out
 
