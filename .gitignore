@@ -19,3 +19,6 @@ e2e-artifacts/
 
 # Obsidian editor config (local UI state for browsing brain/)
 .obsidian/
+
+# SST generated platform/provider tree + local stage state (packages/infra)
+.sst/

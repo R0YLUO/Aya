@@ -4,8 +4,8 @@ type: handoff
 status: open
 packages: [api]
 tasks: [infra-package-scaffold, infra-dynamodb-table, infra-s3-bucket, infra-api-gateway-lambda, infra-web-hosting]
-summary: All five infra-* tasks (SST, DynamoDB, S3, API Gateway, web hosting) need an AWS account, credentials, and a region choice before they can start.
-updated: 2026-06-10
+summary: The infra-* chain needs an AWS account, credentials, and a region choice. The SST scaffold is in place and synthesizes config, but no infra can deploy or be verified end-to-end without credentials.
+updated: 2026-06-11
 ---
 
 # AWS account & credentials
@@ -19,10 +19,14 @@ updated: 2026-06-10
 
 ## Why
 
-The whole `infra-*` chain is `todo` and is the next backend frontier once
-`api-router` lands — `sst diff`/`sst dev` cannot run without credentials. Until then
-the API also can't be verified against real DynamoDB/S3 (repository and presign
-tests use mocked clients only — see [testing & DI](../concepts/testing-and-di.md)).
+The `infra-*` chain is underway: `infra-package-scaffold` is done — the SST app
+(`packages/infra/sst.config.ts`) loads and synthesizes its config, but `sst diff`
+/`sst dev`/`sst deploy` stop at the AWS-credentials refresh and cannot run without
+credentials. The downstream infra tasks (DynamoDB, S3, API Gateway, web hosting) can
+author resources, but none can be deployed or verified end-to-end until this is
+provided. Until then the API also can't be verified against real DynamoDB/S3
+(repository and presign tests use mocked clients only — see
+[testing & DI](../concepts/testing-and-di.md)).
 
 ## Verify after
 

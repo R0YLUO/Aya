@@ -1,0 +1,20 @@
+{
+  "name": "@aya/infra",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Aya infrastructure: the SST app defining Lambda, API Gateway, DynamoDB, S3, and per-stage env wiring.",
+  "type": "module",
+  "scripts": {
+    "dev": "sst dev",
+    "deploy": "sst deploy",
+    "diff": "sst diff",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "clean": "rm -rf .sst .turbo"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "sst": "^4.15.2",
+    "typescript": "^5.8.3"
+  }
+}

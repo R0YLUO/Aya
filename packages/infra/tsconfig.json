@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // SST resolves the platform/provider type declarations under .sst at install
+    // time; allow synthetic default imports for that generated, JS-heavy tree.
+    "allowSyntheticDefaultImports": true,
+    "types": ["node"]
+  },
+  "include": ["sst.config.ts", ".sst/platform/config.d.ts"]
+}

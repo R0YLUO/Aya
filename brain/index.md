@@ -7,13 +7,14 @@
 ## Needs a human (handoffs)
 
 - **[open]** [Anthropic API key + model ids for real LLM verification](./handoffs/anthropic-api-key.md) _(llm)_ — runOcr and analyzeText are done but have only ever run against mocked runners — they have never hit the real Anthropic API.
-- **[open]** [AWS account & credentials for the infra tasks](./handoffs/aws-account.md) _(api)_ — All five infra-* tasks (SST, DynamoDB, S3, API Gateway, web hosting) need an AWS account, credentials, and a region choice before they can start.
+- **[open]** [AWS account & credentials for the infra tasks](./handoffs/aws-account.md) _(api)_ — The infra-* chain needs an AWS account, credentials, and a region choice. The SST scaffold is in place and synthesizes config, but no infra can deploy or be verified end-to-end without credentials.
 - **[open]** [LangSmith account & keys for tracing and evals](./handoffs/langsmith-account.md) _(llm, evals)_ — Tracing wiring is built but silently no-ops without LANGCHAIN_* env; the evals package will need a LangSmith project for datasets.
 - **[open]** [Run the mobile app on a simulator/device](./handoffs/mobile-device-run.md) _(mobile)_ — All mobile work is verified via framework-free unit tests only; the RN app has never been launched, and camera capture needs a real device.
 
 ## Packages (as-built)
 
 - [@aya/api](./packages/api.md) _(api)_ — Transport-agnostic handlers + router (method+path → handler, JSON parse, central error catch → standard envelope/500), ApiError→envelope mapping, DynamoDB repository, S3 presign, short-URL service.
+- [@aya/infra](./packages/infra.md) _(api)_ — SST (Ion) app scaffold — app name/region/stage-aware safety + the aya-<stage> / aya-uploads-<stage> naming convention. Resources (Dynamo/S3/API/Nextjs) still todo.
 - [@aya/llm](./packages/llm.md) _(llm)_ — The two LLM calls (runOcr and analyzeText both built), structured-output runner, retry helper, LangSmith tagging, env-sourced model config.
 - [@aya/mobile](./packages/mobile.md) _(mobile)_ — RN app — typed API client, camera/scan state machines, local-first page store, tappable reader view. Error-states, phrase popup, share flow todo.
 - [@aya/shared](./packages/shared.md) _(shared)_ — Domain types, Zod contracts, error codes, and the reconstruction check — the single source every package imports from.
@@ -39,6 +40,7 @@
 ## Log (newest first)
 
 - [mobile-reader-view: tappable scrollable reader (recovery)](./log/2026-06-11--mobile-reader-view.md) _(mobile)_ — Recovered abandoned worktree work for the mobile reader view (PRD Story 2) onto main — framework-free token logic + thin RN ReaderView, 5 new tests.
+- [infra-package-scaffold: SST app scaffold](./log/2026-06-11--infra-package-scaffold.md) _(api)_ — Created packages/infra — the SST (Ion) app scaffold wiring app name/region, stage-aware safety, and the aya-<stage> / aya-uploads-<stage> naming convention.
 - [Wired all handlers into the API router](./log/2026-06-11--api-router.md) _(api)_ — makeRouter maps method+path → handler, parses the JSON body, owns the central toErrorResponse catch (ApiError keeps status, else 500), and 404s unknown routes; 15 integration tests exercise every route.
 - [Built the GET /shares/{code} resolve handler](./log/2026-06-11--api-handler-shares-resolve.md) _(api)_ — Read handler — resolves a share code to its AnalyzedPage via repository.resolveShare; 200 { page, phrases } or 404 share_not_found; writes nothing.
 - [Built the POST /shares create handler](./log/2026-06-11--api-handler-shares-create.md) _(api)_ — The only write path — validates shape + reconstruction (incl. page.id match), mints a code, persists Page+Phrases+Share in one transaction, returns 201.

@@ -256,7 +256,7 @@
   {
     "taskId": "infra-package-scaffold",
     "description": "Create the packages/infra SST app scaffold (sst.config.ts, package.json, stage configuration for dev and prod) wiring the AWS account/region and the per-stage naming convention aya-<stage>.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "api-router"
     ],
