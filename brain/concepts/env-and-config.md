@@ -48,10 +48,16 @@ plus the model/LangSmith vars (`AYA_OCR_MODEL`, `AYA_ANALYSIS_MODEL`,
 `LANGCHAIN_API_KEY` sourced from `sst.Secret`s (`AnthropicApiKey`,
 `LangsmithApiKey`).
 
+`infra-web-hosting` wires the web hosting env (`sst.aws.Nextjs`): it injects
+`AYA_API_BASE_URL` + `NEXT_PUBLIC_AYA_API_BASE_URL` (both = `api.url`) into the web
+site, and feeds the web site's `web.url` back into the API Lambda's
+`AYA_WEB_BASE_URL` (so minted share links point at the deployed reader). The
+`webBaseUrl` default is now `web.url`, overridable via `process.env["AYA_WEB_BASE_URL"]`.
+
 Still injected-not-env elsewhere:
 
 - API base URL → mobile `AyaApiClient` (`config.baseUrl`; mobile has no env scheme
   yet — `mobile-share-flow` / app bootstrap will need one).
 
-The only remaining infra task (`infra-web-hosting`, todo) wires the web hosting env.
+All infra resources are now defined; the cross-package env loop (web ↔ API) is closed.
 **Update this table whenever a variable is added or renamed.**

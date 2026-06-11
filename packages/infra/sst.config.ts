@@ -139,11 +139,41 @@ export default $config({
     const anthropicApiKey = new sst.Secret("AnthropicApiKey");
     const langsmithApiKey = new sst.Secret("LangsmithApiKey");
 
-    // The public web reader's base URL (used to compose share links). Defaults
-    // to a stage-scoped placeholder for synthesis; the real value is set per
-    // stage via env (or, once infra-web-hosting lands, the Nextjs site URL).
-    const webBaseUrl =
-      process.env["AYA_WEB_BASE_URL"] ?? `https://${stage}.aya.example`;
+    // ---- HTTP API (declared before web hosting so the Nextjs site can read
+    // ---- the API base URL, and the API Lambda can read the web base URL) -----
+    //
+    // One Lambda serves every route: the @aya/api router does method+path
+    // dispatch internally (packages/api/src/lambda.ts is the composition root +
+    // API Gateway v2 adapter). The component is created here; its five routes
+    // are declared below, after the env (which references the web URL) is built.
+    const api = new sst.aws.ApiGatewayV2("Api");
+
+    // ---- Web reader hosting (specs/07-monorepo-and-deployment.md) -------------
+    //
+    // sst.aws.Nextjs hosts @aya/web: the /s/{code} share reader. The route is a
+    // `force-dynamic` Server Component (src/app/s/[code]/page.tsx), so it is
+    // server-rendered per request — sst.aws.Nextjs deploys SSR by default
+    // (OpenNext: Lambda for the server, CloudFront/S3 for static assets).
+    //
+    //   - `path` is relative to sst.config.ts (the infra package dir), so the
+    //     web workspace is `../web`. SST/OpenNext runs `next build` there.
+    //   - The web app reads the backend base URL from `AYA_API_BASE_URL` (SSR)
+    //     with `NEXT_PUBLIC_AYA_API_BASE_URL` as the public fallback
+    //     (packages/web/src/lib/api.ts). Both are wired to `api.url` so the
+    //     deployed reader calls the deployed API with no committed host.
+    const web = new sst.aws.Nextjs("Web", {
+      path: "../web",
+      environment: {
+        AYA_API_BASE_URL: api.url,
+        NEXT_PUBLIC_AYA_API_BASE_URL: api.url,
+      },
+    });
+
+    // The public web reader's base URL (used by the short-URL service to compose
+    // share links). It points at the deployed Nextjs site URL so minted /s/{code}
+    // links open the real reader; an explicit `AYA_WEB_BASE_URL` env (e.g. a
+    // custom domain) overrides it.
+    const webBaseUrl = process.env["AYA_WEB_BASE_URL"] ?? web.url;
 
     // Environment injected into the API Lambda. The repository reads the table
     // name from `AYA_TABLE_NAME`, the presign/scan path reads the bucket name
@@ -170,18 +200,15 @@ export default $config({
       AYA_ENV: stage,
     } as const;
 
-    // ---- HTTP API + the single API Lambda (specs/03, specs/07) ----------------
+    // ---- The single API Lambda routes (specs/03, specs/07) --------------------
     //
-    // One Lambda serves every route: the @aya/api router does method+path
-    // dispatch internally (packages/api/src/lambda.ts is the composition root +
-    // API Gateway v2 adapter). Each of the five product routes is declared
-    // explicitly (matching specs/03-api-design.md) and points at that handler.
+    // Each of the five product routes is declared explicitly (matching
+    // specs/03-api-design.md) and points at the one @aya/api handler.
     //
     // The heavy POST /pages route runs two Claude calls (~15s budget), so it
     // gets a generous timeout — comfortably above the budget, under API
     // Gateway's hard 29s integration limit — and raised memory for image
     // handling. The other routes keep lightweight defaults.
-    const api = new sst.aws.ApiGatewayV2("Api");
 
     // Shared Lambda config for the lightweight routes: links (least-privilege
     // IAM to the table + bucket) and the env above. `handler` resolves to the
@@ -206,8 +233,8 @@ export default $config({
     api.route("GET /shares/{code}", { handler: apiHandler, ...baseFn });
     api.route("GET /health", { handler: apiHandler, ...baseFn });
 
-    // Resources still to be added by the downstream infra-* task:
-    //   - infra-web-hosting → sst.aws.Nextjs
+    // All planned AWS resources are now defined: DynamoDB table, uploads bucket,
+    // HTTP API + scan Lambda, and the Next.js web reader hosting.
 
     return {
       stage,
@@ -215,6 +242,7 @@ export default $config({
       tableArn: table.arn,
       uploadBucketName: uploadBucket.name,
       apiUrl: api.url,
+      webUrl: web.url,
       apiTableNameEnv: apiEnvironment.AYA_TABLE_NAME,
       apiUploadBucketEnv: apiEnvironment.AYA_UPLOAD_BUCKET,
     };

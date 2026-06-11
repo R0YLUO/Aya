@@ -2,8 +2,8 @@
 title: "@aya/infra"
 type: package
 packages: [api]
-tasks: [infra-package-scaffold, infra-dynamodb-table, infra-s3-bucket, infra-api-gateway-lambda]
-summary: SST (Ion) app — app name/region/stage-aware safety, the aya-<stage> naming convention, the DynamoDB single-table, the ephemeral aya-uploads-<stage> S3 bucket (lifecycle + CORS), and the HTTP API + single scan Lambda (five routes, linked least-privilege, secrets/env wired). Nextjs hosting still todo.
+tasks: [infra-package-scaffold, infra-dynamodb-table, infra-s3-bucket, infra-api-gateway-lambda, infra-web-hosting]
+summary: SST (Ion) app — app name/region/stage-aware safety, the aya-<stage> naming convention, the DynamoDB single-table, the ephemeral aya-uploads-<stage> S3 bucket (lifecycle + CORS), the HTTP API + single scan Lambda (five routes, linked least-privilege, secrets/env wired), and the Next.js web reader hosting (SSR, API/web URLs cross-wired). All infra resources defined; deploy gated on the aws-account handoff.
 updated: 2026-06-11
 ---
 
@@ -11,8 +11,9 @@ updated: 2026-06-11
 
 The SST app that defines Aya's AWS infrastructure. `run()` establishes the naming
 convention/stage safety and provisions the **DynamoDB single-table**, the
-**ephemeral uploads S3 bucket**, and the **HTTP API + scan Lambda**; web hosting
-(Nextjs) is the only resource still todo.
+**ephemeral uploads S3 bucket**, the **HTTP API + scan Lambda**, and the
+**Next.js web reader hosting**. Every planned resource is now defined; the actual
+deploy is gated on the [aws-account handoff](../handoffs/aws-account.md).
 
 ## Layout
 
@@ -86,9 +87,21 @@ convention/stage safety and provisions the **DynamoDB single-table**, the
     `LANGCHAIN_PROJECT` (default `aya-<stage>`), `AYA_ENV` (= stage). `api.url` is
     a new stack output.
 
-## Still todo (downstream infra-* task adds this inside `run()`)
-
-- `infra-web-hosting` → `sst.aws.Nextjs` for `@aya/web`.
+- **Next.js web hosting** (`infra-web-hosting`) — `new sst.aws.Nextjs("Web", …)`:
+  - `path: "../web"` (relative to `sst.config.ts`, i.e. the `@aya/web` workspace);
+    OpenNext runs `next build` and deploys SSR by default (server Lambda +
+    CloudFront/S3 for assets). The `/s/{code}` route is `force-dynamic`, so it is
+    server-rendered per request — exactly what SSR hosting provides.
+  - `environment: { AYA_API_BASE_URL: api.url, NEXT_PUBLIC_AYA_API_BASE_URL: api.url }`
+    — both the SSR var and the public fallback the web client reads
+    (`packages/web/src/lib/api.ts`) point at the deployed API.
+  - **Ordering / cross-wiring**: `api` (the `ApiGatewayV2` component) is created
+    first, then `web` (so it can read `api.url`), then `webBaseUrl` resolves to
+    `web.url`, then the env map and the five `api.route(...)` calls. This closes the
+    loop both ways — web → API base URL, API Lambda → web base URL
+    (`AYA_WEB_BASE_URL`, used by the short-URL service) — without a committed host.
+    `process.env["AYA_WEB_BASE_URL"]` still overrides `web.url` (e.g. a custom
+    domain). `web.url` is a new stack output.
 
 ## Gotchas
 

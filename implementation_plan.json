@@ -297,7 +297,7 @@
   {
     "taskId": "infra-web-hosting",
     "description": "Add the Next.js web reader hosting to the SST app (SSR for /s/{code}) and wire the API base URL into the web app's environment and the WEB_BASE_URL used by the short-URL service.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "infra-api-gateway-lambda",
       "web-package-scaffold"
