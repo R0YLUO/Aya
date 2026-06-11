@@ -3,7 +3,7 @@ title: Run the mobile app on a simulator/device
 type: handoff
 status: open
 packages: [mobile]
-tasks: [mobile-camera-capture, mobile-scan-flow, mobile-local-store, mobile-reader-view, mobile-error-states, mobile-phrase-popup]
+tasks: [mobile-camera-capture, mobile-scan-flow, mobile-local-store, mobile-reader-view, mobile-error-states, mobile-phrase-popup, mobile-share-flow]
 summary: All mobile work is verified via framework-free unit tests only; the RN app has never been launched, and camera capture needs a real device.
 updated: 2026-06-11
 ---
@@ -41,5 +41,11 @@ rendering is what remains device-unverified.)
 Also confirm the scan-error UI: force each scan error code and verify
 `ScanErrorScreen` shows the PRD copy inline (no crash) and the CTA routes
 correctly — Retake returns to the camera; Retry re-runs upload+scan.
+Also walk the share flow: from a stored page tap Share, confirm `ShareScreen`
+shows the minted short URL and that the native share sheet opens / Copy puts the
+URL on the clipboard, and that a forced failure shows the inline message with a
+working Retry. (The request body == stored page and the URL-in-state are
+unit-tested in `share/runShare.test.ts`; `Share`/clipboard presentation and the
+real `POST /shares` round-trip are what remain device/deploy-unverified.)
 Until the API is deployed, confirm at least that the app boots and screens render.
 Note observations here, then mark resolved (or file follow-up issues).

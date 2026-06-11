@@ -420,7 +420,7 @@
   {
     "taskId": "mobile-share-flow",
     "description": "Implement the mobile share action: POST /shares with the locally stored page + phrases, receive the short URL, and present it to the user (copy/share sheet).",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "mobile-reader-view",
       "mobile-scan-flow"

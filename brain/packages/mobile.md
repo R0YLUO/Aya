@@ -2,8 +2,8 @@
 title: "@aya/mobile"
 type: package
 packages: [mobile]
-tasks: [mobile-package-scaffold, mobile-camera-capture, mobile-scan-flow, mobile-local-store, mobile-reader-view, mobile-error-states, mobile-phrase-popup]
-summary: RN app — typed API client, camera/scan state machines, local-first page store, tappable reader view, tap-to-translate phrase popup, inline scan-error UI. Share flow todo.
+tasks: [mobile-package-scaffold, mobile-camera-capture, mobile-scan-flow, mobile-local-store, mobile-reader-view, mobile-error-states, mobile-phrase-popup, mobile-share-flow]
+summary: RN app — typed API client, camera/scan state machines, local-first page store, tappable reader view, tap-to-translate phrase popup, inline scan-error UI, share flow (mint short URL → native share/copy). All planned mobile tasks done.
 updated: 2026-06-11
 ---
 
@@ -16,8 +16,9 @@ orchestration) with thin RN screens over it.
 ## Status
 
 - Done: scaffold, camera capture, scan flow, local store, reader view,
-  error states, phrase popup.
-- Todo: `mobile-share-flow`.
+  error states, phrase popup, share flow.
+- All planned mobile tasks complete. (App has still never been launched on a
+  device — see `brain/handoffs/mobile-device-run.md`.)
 
 ## What lives where
 
@@ -74,6 +75,22 @@ orchestration) with thin RN screens over it.
   `original`, then pinyin/translation/contextualMeaning. Returns `null` when the
   phrase is null or carries no analysis (guard; the reader only opens it for
   interactive tokens).
+- `src/share/` — PRD share action (the system's **only** write path).
+  `runShare(deps, stored)`: framework-free, makes **exactly one** `POST /shares`
+  via `api.sharePage(stored.page, stored.phrases)` — the request body is the
+  stored `AnalyzedPage` split into `{ page, phrases }`, no transformation, so the
+  shared page matches what the user reads. `shareState.ts`:
+  idle/sharing/success/error reducer (success holds the minted `ShareResponse`
+  so the URL is in state for display; error carries `ShareErrorCode =
+  ScanErrorCode` for the inline retry). `useShareFlow.ts`: hook wiring `runShare`
+  + reducer, mapping unknown errors to `network_error` (mirrors `useScanFlow`).
+  `shareSheet.ts`: injectable `ShareSheet` interface (`present` → RN `Share`
+  sheet; `copy` → injected clipboard, no-op-safe without a clipboard module) so
+  tests/screens never touch native modules — `createNativeShareSheet` is the
+  default adapter. `ShareScreen.tsx`: thin view — idle Share button → sharing
+  spinner → success (shows URL + Share/Copy actions) → inline error message +
+  single Retry CTA (copy from `errors/messages.ts` `presentScanError`; retry
+  re-runs `onShare(page)`).
 - `src/test-support/fixtures.ts` — shared valid `AnalyzedPage` fixtures for tests.
 
 ## Conventions (keep for the remaining mobile tasks)
@@ -86,3 +103,12 @@ orchestration) with thin RN screens over it.
 
 - `ScanErrorCode` is defined **twice** (in `scan/scanState.ts` and
   `errors/messages.ts`), identically. A lint-pass candidate for consolidation.
+  `share/shareState.ts` deliberately **reuses** the `errors/messages.ts` one
+  (`ShareErrorCode = ScanErrorCode`) rather than adding a third copy.
+- `tsconfig.test.json` has an explicit `files` allow-list, not a glob. Any module
+  that imports a React/React-Native module (`*.tsx` screens, `shareSheet.ts`,
+  hooks) is **excluded** from node:test and covered by `typecheck` only — so a
+  new `.test.ts` must not (transitively) import RN, and any new framework-free
+  source + its test must be **added to that list** or it won't run. `shareSheet.ts`
+  (imports `react-native` `Share`) is therefore typecheck-only; its copy/present
+  behaviour is verified through the injectable interface, not a node test.

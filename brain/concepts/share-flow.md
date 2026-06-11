@@ -2,15 +2,17 @@
 title: Share flow (end to end)
 type: concept
 packages: [api, web, mobile]
-tasks: [api-short-url-service, api-dynamodb-repository, web-share-page-ssr]
-summary: POST /shares persists page+phrases+share transactionally and mints /s/{code}; web resolves it SSR via GET /shares/{code}. Both handlers + router built; only mobile share UI todo.
+tasks: [api-short-url-service, api-dynamodb-repository, web-share-page-ssr, mobile-share-flow]
+summary: POST /shares persists page+phrases+share transactionally and mints /s/{code}; web resolves it SSR via GET /shares/{code}. Server handlers + router + mobile share UI all built; only real-device + deployed verification remain.
 updated: 2026-06-11
 ---
 
 # Share flow (as built so far)
 
 ```
-mobile sharePage(page, phrases)  ──► POST /shares  (handler BUILT: api-handler-shares-create)
+mobile ShareScreen → useShareFlow → runShare(stored)
+       └─ api.sharePage(stored.page, stored.phrases)  (mobile UI BUILT: mobile-share-flow)
+                                  ──► POST /shares  (handler BUILT: api-handler-shares-create)
                                         ShortUrlService.generateShareCode()   (built)
                                         PageRepository.savePageWithPhrasesAndShare (built, transactional)
                                         → { code, url, pageId }
@@ -36,7 +38,14 @@ web /s/{code} (SSR, built) ─────────► GET /shares/{code}  (h
 - Built (router): `makeRouter` wires `POST /shares` → create and
   `GET /shares/{code}` → resolve (and the other three routes) with the central error
   catch; see [@aya/api](../packages/api.md).
-- Todo: `mobile-share-flow` (the UI invoking `sharePage` and presenting the URL).
+- Built (mobile UI — `mobile-share-flow`): `runShare(deps, stored)` POSTs the
+  stored `AnalyzedPage` as `{ page, phrases }` (one call, no transformation) →
+  `ShareResponse`; `useShareFlow` drives idle→sharing→success/error; `ShareScreen`
+  shows the minted URL with native-share / copy actions (injectable `ShareSheet`)
+  and an inline retry on failure. See [@aya/mobile](../packages/mobile.md).
+- Remaining: real end-to-end (the mobile share has only run against a mocked
+  client/fetch; needs the deployed API + a device — handoffs `aws-account`,
+  `mobile-device-run`).
 
 ## Constraints for the handlers
 

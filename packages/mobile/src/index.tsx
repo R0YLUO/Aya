@@ -72,3 +72,21 @@ export {
   type ScanErrorPresentation,
   type RecoveryCta,
 } from './errors/index.js';
+
+export {
+  runShare,
+  useShareFlow,
+  ShareScreen,
+  shareReducer,
+  initialShareState,
+  createNativeShareSheet,
+  type ShareDeps,
+  type UseShareFlow,
+  type ShareScreenProps,
+  type ShareState,
+  type ShareEvent,
+  type ShareErrorCode,
+  type ShareSheet,
+  type ClipboardLike,
+  type NativeShareSheetDeps,
+} from './share/index.js';
