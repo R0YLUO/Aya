@@ -3,14 +3,14 @@ title: Share flow (end to end)
 type: concept
 packages: [api, web, mobile]
 tasks: [api-short-url-service, api-dynamodb-repository, web-share-page-ssr]
-summary: POST /shares persists page+phrases+share transactionally and mints /s/{code}; web resolves it SSR. Both share handlers and the mobile UI are still todo.
-updated: 2026-06-10
+summary: POST /shares persists page+phrases+share transactionally and mints /s/{code}; web resolves it SSR. Create handler built; resolve handler + mobile UI still todo.
+updated: 2026-06-11
 ---
 
 # Share flow (as built so far)
 
 ```
-mobile sharePage(page, phrases)  ──► POST /shares  [NOT BUILT: api-handler-shares-create]
+mobile sharePage(page, phrases)  ──► POST /shares  (handler BUILT: api-handler-shares-create)
                                         ShortUrlService.generateShareCode()   (built)
                                         PageRepository.savePageWithPhrasesAndShare (built, transactional)
                                         → { code, url, pageId }
@@ -26,15 +26,19 @@ web /s/{code} (SSR, built) ─────────► GET /shares/{code}  [N
   (`${WEB_BASE_URL}/s/${code}`), the repository, the mobile client method
   (`AyaApiClient.sharePage`, already validates `ShareRequest/ResponseSchema`), and the
   whole web read side (SSR route → `resolveSharePage` → `ReaderWithPopups`).
-- Todo: `api-handler-shares-create`, `api-handler-shares-resolve`, `api-router`,
+- Built (create handler): `makeSharesCreateHandler` validates
+  `ShareRequestSchema` + [checkReconstruction](./reconstruction-invariant.md) +
+  `page.id` match, then persists; returns `201 { code, url, pageId }`.
+- Todo: `api-handler-shares-resolve`, `api-router`,
   `mobile-share-flow` (the UI invoking `sharePage` and presenting the URL).
 
-## Constraints for the todo handlers
+## Constraints for the handlers
 
-- Create: validate body with `ShareRequestSchema`, run
-  [checkReconstruction](./reconstruction-invariant.md) and reject failures
-  (`validation_error` carrying the reason) before persisting; respond
-  `{ code, url, pageId }`.
+- Create (BUILT): validates body with `ShareRequestSchema`, runs
+  [checkReconstruction](./reconstruction-invariant.md) **and** asserts the phrases'
+  shared pageId equals `page.id`, rejecting failures (`validation_error` carrying the
+  reason) **before** any write; responds `{ code, url, pageId }`. The persist is the
+  first side effect, so a rejected payload writes nothing.
 - Resolve: unknown/dangling code → `share_not_found` (404); the web client renders
   the friendly not-found page **only** for that code and propagates everything else
   to the error boundary — so don't soften other failures into 404s.

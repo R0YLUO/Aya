@@ -60,3 +60,9 @@ export type {
 } from './handlers/pages.js';
 export { makeScanHandlerWithLlm } from './handlers/pages-wiring.js';
 export type { ScanWiringOptions } from './handlers/pages-wiring.js';
+export { makeSharesCreateHandler } from './handlers/shares.js';
+export type {
+  SharesCreateHandlerDeps,
+  SharePersister,
+  ShareUrlMinter,
+} from './handlers/shares.js';

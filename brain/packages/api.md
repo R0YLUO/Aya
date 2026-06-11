@@ -2,8 +2,8 @@
 title: "@aya/api"
 type: package
 packages: [api]
-tasks: [api-package-scaffold, api-error-envelope, api-dynamodb-repository, api-s3-presign-service, api-short-url-service, api-handler-health, api-handler-uploads, api-handler-pages]
-summary: Transport-agnostic handlers (health, uploads, pages/scan built; shares/router todo), ApiError→envelope mapping, DynamoDB repository, S3 presign, short-URL service.
+tasks: [api-package-scaffold, api-error-envelope, api-dynamodb-repository, api-s3-presign-service, api-short-url-service, api-handler-health, api-handler-uploads, api-handler-pages, api-handler-shares-create]
+summary: Transport-agnostic handlers (health, uploads, pages/scan, shares-create built; shares-resolve/router todo), ApiError→envelope mapping, DynamoDB repository, S3 presign, short-URL service.
 updated: 2026-06-11
 ---
 
@@ -16,9 +16,10 @@ live in the router.
 ## Status
 
 - Built: `errors.ts`, `repositories/`, `services/`, handlers for `GET /health`,
-  `POST /uploads`, and `POST /pages` (the scan orchestration).
-- Todo: `api-handler-shares-create`, `api-handler-shares-resolve`, `api-router`. The
-  `infra-*` tasks (SST) are all todo.
+  `POST /uploads`, `POST /pages` (the scan orchestration), and `POST /shares` (the
+  create handler — the only write path).
+- Todo: `api-handler-shares-resolve`, `api-router`. The `infra-*` tasks (SST) are all
+  todo.
 
 ## What lives where
 
@@ -50,6 +51,17 @@ live in the router.
   mint `Page` (uuid + `createdAt`) → `analyzeText` (throw→502 `analysis_failed`) →
   `ScanResponseSchema.safeParse` shape-check (unparseable→502) → 200 `AnalyzedPage`.
   Emits one `page_scanned` JSON log line on every terminal path (specs/05).
+- `src/handlers/shares.ts` — `makeSharesCreateHandler(deps)`: the `POST /shares`
+  handler and the **only write path**. Deps `{ repository, shortUrls, now }` are
+  injected (`SharePersister`/`ShareUrlMinter` are structural subsets of
+  `PageRepository`/`ShortUrlService`, so it unit-tests with recording fakes). Flow:
+  `ShareRequestSchema.safeParse` (shape) → `checkReconstruction(page.fullText,
+  phrases)` → **explicit `phrases[0].pageId === page.id` check** (checkReconstruction
+  only asserts a *single* pageId, not that it matches this page) → all checks pass →
+  mint code → `savePageWithPhrasesAndShare` (one transaction) → `201 { code, url,
+  pageId }`. Any validation failure throws `validationError` (400) **before** the
+  persist call, so a rejected payload writes nothing. No share-code collision guard
+  (unconditional `Put`; see share-flow page).
 - `src/handlers/pages-wiring.ts` — `makeScanHandlerWithLlm(presign, opts)`: the live
   adapter binding the real `@aya/llm` `runOcr`/`analyzeText` and
   `S3PresignService.getUploadedImage` to the injectable shapes. **This is the only
@@ -78,5 +90,5 @@ live in the router.
   don't surface usage (it lives in LangSmith — specs/05). The handler/log line already
   carry `ocrTokens`/`analysisTokens` fields; populate them when the LLM calls return
   usage. Not a human blocker, so no handoff.
-- Share creation should validate `checkReconstruction` before persisting, and is the
-  **only** write path.
+- Share creation (built) validates `checkReconstruction` **plus** `page.id` match
+  before persisting, and is the **only** write path.

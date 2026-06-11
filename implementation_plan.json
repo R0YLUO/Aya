@@ -218,7 +218,7 @@
   {
     "taskId": "api-handler-shares-create",
     "description": "Implement the POST /shares handler: validate { page, phrases } against shared schemas AND the reconstruction invariant (phrases reference page.id, contiguous 1-based unique indexes, concatenation equals page.fullText); mint a code; persist Page+Phrases+Share transactionally; return 201 { code, url, pageId }.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "api-dynamodb-repository",
       "api-short-url-service",

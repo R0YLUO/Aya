@@ -13,7 +13,7 @@
 
 ## Packages (as-built)
 
-- [@aya/api](./packages/api.md) _(api)_ — Transport-agnostic handlers (health, uploads, pages/scan built; shares/router todo), ApiError→envelope mapping, DynamoDB repository, S3 presign, short-URL service.
+- [@aya/api](./packages/api.md) _(api)_ — Transport-agnostic handlers (health, uploads, pages/scan, shares-create built; shares-resolve/router todo), ApiError→envelope mapping, DynamoDB repository, S3 presign, short-URL service.
 - [@aya/llm](./packages/llm.md) _(llm)_ — The two LLM calls (runOcr and analyzeText both built), structured-output runner, retry helper, LangSmith tagging, env-sourced model config.
 - [@aya/mobile](./packages/mobile.md) _(mobile)_ — RN app — typed API client, camera/scan state machines, local-first page store, tappable reader view. Error-states, phrase popup, share flow todo.
 - [@aya/shared](./packages/shared.md) _(shared)_ — Domain types, Zod contracts, error codes, and the reconstruction check — the single source every package imports from.
@@ -26,7 +26,7 @@
 - [Error handling across the stack](./concepts/error-handling.md) _(shared, api, web, mobile)_ — One envelope, one closed ErrorCode enum, three deliberately separate ApiError classes, and two codes that intentionally live outside the enum.
 - [Reconstruction invariant](./concepts/reconstruction-invariant.md) _(shared, llm, api, web)_ — phrases.join('') === fullText, indexes unique & contiguous from 1 — who checks it, who relies on it, and where it is enforced (and not yet).
 - [Scan flow (end to end)](./concepts/scan-flow.md) _(mobile, api, llm)_ — Photo → presign → S3 PUT → POST /pages (OCR + analysis, stateless) → AnalyzedPage saved locally. Full server path now built; only the router/deploy remain.
-- [Share flow (end to end)](./concepts/share-flow.md) _(api, web, mobile)_ — POST /shares persists page+phrases+share transactionally and mints /s/{code}; web resolves it SSR. Both share handlers and the mobile UI are still todo.
+- [Share flow (end to end)](./concepts/share-flow.md) _(api, web, mobile)_ — POST /shares persists page+phrases+share transactionally and mints /s/{code}; web resolves it SSR. Create handler built; resolve handler + mobile UI still todo.
 - [Structured LLM output, retries & tracing](./concepts/structured-llm-output.md) _(llm)_ — The StructuredRunner pattern every LLM call follows — Zod-bound runner, injectable for tests, bounded retries, defensive re-parse, tagged runs.
 - [Testing & dependency-injection conventions](./concepts/testing-and-di.md) _(shared, llm, api, web, mobile)_ — How every package tests (node:test vs vitest), and the pervasive inject-everything pattern that keeps tests offline and device-free.
 - [Web e2e & UI verification (Playwright)](./concepts/web-e2e-playwright.md) _(web, shared)_ — The hermetic Playwright harness in packages/web/e2e — stub API on 4545, next dev on 3100, fixture-filename-is-the-share-code, and the ui-verify skill that gates web changes.
@@ -39,6 +39,7 @@
 ## Log (newest first)
 
 - [mobile-reader-view: tappable scrollable reader (recovery)](./log/2026-06-11--mobile-reader-view.md) _(mobile)_ — Recovered abandoned worktree work for the mobile reader view (PRD Story 2) onto main — framework-free token logic + thin RN ReaderView, 5 new tests.
+- [Built the POST /shares create handler](./log/2026-06-11--api-handler-shares-create.md) _(api)_ — The only write path — validates shape + reconstruction (incl. page.id match), mints a code, persists Page+Phrases+Share in one transaction, returns 201.
 - [Built the POST /pages scan handler](./log/2026-06-11--api-handler-pages.md) _(api)_ — Stateless OCR→analysis scan orchestration with injected deps, branch-mapped errors, and a page_scanned log line. Recovered abandoned uncommitted work and finished it.
 - [web e2e: Playwright harness + ui-verify skill (ADR-0011)](./log/2026-06-10--web-e2e-playwright.md) _(web, shared)_ — Added the hermetic Playwright e2e harness (stub API + next dev), 6 share-reader specs, the ui-verify skill, Playwright MCP registration, and the e2e gate in golden rule 2.
 - [project-manager skill + handoffs ledger added](./log/2026-06-10--project-manager-skill.md) — New .claude/skills/project-manager (status reports for the human) and brain/handoffs/ (needs-a-human ledger); product-implementation now records verification gaps as handoffs.
