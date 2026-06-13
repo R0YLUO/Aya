@@ -2,9 +2,9 @@
 title: "@aya/evals"
 type: package
 packages: [evals]
-tasks: [evals-package-scaffold]
-summary: Eval workspace — versioned JSON datasets, deterministic scorers (CER, boundary F1 + idiom-split, reconstruction), an offline-capable runner over the real runOcr/analyzeText, and optional LangSmith dataset registration. `npm run eval` works locally with no keys.
-updated: 2026-06-11
+tasks: [evals-package-scaffold, evals-seed-datasets]
+summary: Eval workspace — versioned JSON datasets (OCR, analysis/segmentation, translation), deterministic scorers (CER, boundary F1 + idiom-split, reconstruction), an offline-capable runner over the real runOcr/analyzeText, and optional LangSmith dataset registration. `npm run eval` works locally with no keys.
+updated: 2026-06-13
 ---
 
 # @aya/evals (as built)
@@ -23,14 +23,23 @@ fully offline when its env is absent.
 
 ## What lives where
 
-- `src/datasets.ts` — Zod schemas + `loadOcrDataset(version)` / `loadAnalysisDataset(version)`.
-  Fixtures are validated on load; the analysis schema enforces
-  `goldBoundaries.join('') === fullText` (reconstruction invariant for the gold itself).
-  `findDatasetsDir()` walks up from the module to locate `datasets/` (works from `dist/`
-  and `dist-test/`).
-- `datasets/ocr/v1.json`, `datasets/analysis/v1.json` — versioned fixtures
-  (`<name>/<version>.json`). OCR set includes the hard PRD cases (`unreadable`,
-  `no_chinese_text`). Image refs are placeholder S3 URLs until real photos land.
+- `src/datasets.ts` — Zod schemas + `loadOcrDataset` / `loadAnalysisDataset` /
+  `loadTranslationDataset` (each defaulting to `v1`). Fixtures are validated on load; the
+  analysis schema enforces `goldBoundaries.join('') === fullText` (reconstruction invariant
+  for the gold itself), and the translation schema enforces `fullText.includes(phrase)` (the
+  phrase under test must occur verbatim in its passage). `findDatasetsDir()` walks up from the
+  module to locate `datasets/` (works from `dist/` and `dist-test/`).
+- `datasets/ocr/v1.json`, `datasets/analysis/v1.json`, `datasets/translation/v1.json` —
+  versioned fixtures (`<name>/<version>.json`), seeded by `evals-seed-datasets`:
+  - **OCR (5)**: small-but-real literary passages (multi-line, punctuation, a 成语 page, a
+    proper-noun page) plus the hard PRD cases `unreadable` (empty fullText) and
+    `no_chinese_text`. Image refs are placeholder S3 URLs until real photos land.
+  - **Analysis (4)**: segmentation gold emphasising idioms kept whole (`画蛇添足`, `弄巧成拙`),
+    compounds (`天气`, `公园`, `散步`), and a proper noun (`鲁迅`), each with `goldPinyin`.
+  - **Translation (5)**: context-dependent phrases (`意思` as a gift, `东西` as "things",
+    `老是` as "always", `算了` as "forget it", the 成语 `不择手段`) with a context-free
+    `referenceTranslation`, the `referenceContextualMeaning` to reward, and `rubricNotes` for
+    the (deferred) LLM-as-judge scorer.
 - `src/scorers.ts` — pure functions: `editDistance`, `characterErrorRate` /
   `characterAccuracy` (CER), `boundaryF1` (compares interior cut offsets of two
   segmentations over the same text), `idiomSplitCount` (gold multi-char tokens not kept
@@ -43,7 +52,10 @@ fully offline when its env is absent.
 - `src/run-evals.ts` — `runEvals(options)` → structured `EvalReport`; `printReport`;
   the `isMain()`-guarded CLI entrypoint. Model stages run only when a runner is injected
   OR `ANTHROPIC_API_KEY` is set — otherwise the report section is empty and the summary
-  says "skipped". The CLI exits non-zero if `totalIdiomSplits > 0`.
+  says "skipped". The translation set is **loaded/validated on every run** (and registered
+  to LangSmith when enabled) but not scored — its `EvalReport.translation.exampleCount` is
+  reported; the LLM-as-judge scorer is deferred (needs the Anthropic key). The CLI exits
+  non-zero if `totalIdiomSplits > 0`.
 - `src/index.ts` — barrel re-exporting datasets, scorers, langsmith, and runner.
 
 ## Conventions

@@ -1,17 +1,31 @@
 {
   "name": "ocr",
   "version": "v1",
-  "description": "OCR set: gold fullText per page image. Image refs are placeholders until real photos land (see the anthropic-api-key / langsmith handoffs). Includes the hard PRD cases (unreadable, no Chinese text).",
+  "description": "OCR set: gold fullText per book-page image, with line breaks and punctuation preserved. Small-but-real Simplified-Chinese literary passages plus the hard PRD cases (unreadable, no Chinese text). Image refs are placeholder S3 URLs until real photos land — see the anthropic-api-key / langsmith handoffs.",
   "examples": [
     {
       "id": "ocr-clear-001",
       "image": { "kind": "url", "url": "s3://aya-eval-fixtures/ocr/clear-001.jpg" },
-      "expected": { "status": "ok", "fullText": "今天天气很好。" }
+      "expected": {
+        "status": "ok",
+        "fullText": "今天天气很好，我们一起去公园散步吧。"
+      }
     },
     {
-      "id": "ocr-clear-002",
+      "id": "ocr-clear-idiom-002",
       "image": { "kind": "url", "url": "s3://aya-eval-fixtures/ocr/clear-002.jpg" },
-      "expected": { "status": "ok", "fullText": "他说：“画蛇添足。”" }
+      "expected": {
+        "status": "ok",
+        "fullText": "他做事总是画蛇添足，结果弄巧成拙。"
+      }
+    },
+    {
+      "id": "ocr-clear-paragraph-003",
+      "image": { "kind": "url", "url": "s3://aya-eval-fixtures/ocr/clear-003.jpg" },
+      "expected": {
+        "status": "ok",
+        "fullText": "鲁迅站在窗前，望着远处的群山。\n他想起了童年的故乡，心里涌起一阵说不出的滋味。"
+      }
     },
     {
       "id": "ocr-unreadable-001",

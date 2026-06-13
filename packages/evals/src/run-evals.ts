@@ -25,6 +25,7 @@ import { pathToFileURL } from 'node:url';
 import {
   loadOcrDataset,
   loadAnalysisDataset,
+  loadTranslationDataset,
   type OcrExample,
   type AnalysisExample,
 } from './datasets.js';
@@ -61,6 +62,12 @@ export interface EvalReport {
     totalIdiomSplits: number;
     reconstructionPassRate: number;
   };
+  /**
+   * Translation set is loaded/validated and (when enabled) registered, but the
+   * LLM-as-judge scorer is deferred to a later task (needs the Anthropic key), so
+   * only the example count is reported here for now.
+   */
+  translation: { exampleCount: number };
   langsmith: { enabled: boolean; registered: boolean };
 }
 
@@ -72,6 +79,7 @@ export interface RunEvalsOptions {
   /** Dataset versions to load. */
   ocrVersion?: string;
   analysisVersion?: string;
+  translationVersion?: string;
   /** Env source (LangSmith + model config). Defaults to process.env. */
   env?: NodeJS.ProcessEnv;
   /** When true, mirror the loaded fixtures into LangSmith (if enabled). */
@@ -152,6 +160,9 @@ export async function runEvals(options: RunEvalsOptions = {}): Promise<EvalRepor
   const env = options.env ?? process.env;
   const ocrData = await loadOcrDataset(options.ocrVersion);
   const analysisData = await loadAnalysisDataset(options.analysisVersion);
+  // Loaded (and validated) on every run so a malformed fixture fails loudly, even
+  // though the LLM-as-judge translation scorer is deferred (needs the Anthropic key).
+  const translationData = await loadTranslationDataset(options.translationVersion);
 
   const lsEnabled = isLangSmithEnabled(env);
   let registered = false;
@@ -178,7 +189,22 @@ export async function runEvals(options: RunEvalsOptions = {}): Promise<EvalRepor
       },
       env,
     );
-    registered = ocrReg && analysisReg;
+    const translationReg = await registerLangSmithDataset(
+      {
+        datasetName: `aya-translation-${translationData.version}`,
+        description: translationData.description ?? '',
+        examples: translationData.examples.map((e) => ({
+          inputs: { fullText: e.fullText, phrase: e.phrase },
+          outputs: {
+            referenceTranslation: e.referenceTranslation,
+            referenceContextualMeaning: e.referenceContextualMeaning,
+            rubricNotes: e.rubricNotes,
+          },
+        })),
+      },
+      env,
+    );
+    registered = ocrReg && analysisReg && translationReg;
   }
 
   // Decide whether the model path can run: a runner is injected, or a real key.
@@ -213,6 +239,7 @@ export async function runEvals(options: RunEvalsOptions = {}): Promise<EvalRepor
         analysisRows.map((r) => (r.reconstructionOk ? 1 : 0)),
       ),
     },
+    translation: { exampleCount: translationData.examples.length },
     langsmith: { enabled: lsEnabled, registered },
   };
 }
@@ -242,6 +269,9 @@ export function printReport(report: EvalReport): void {
       )}`,
     );
   }
+  console.log(
+    `Translation: ${report.translation.exampleCount} examples loaded (judge scorer deferred — needs ANTHROPIC_API_KEY)`,
+  );
   console.log(
     `LangSmith: ${report.langsmith.enabled ? 'enabled' : 'disabled'}${
       report.langsmith.registered ? ' (datasets registered)' : ''

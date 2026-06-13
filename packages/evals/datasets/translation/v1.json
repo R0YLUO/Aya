@@ -1,0 +1,47 @@
+{
+  "name": "translation",
+  "version": "v1",
+  "description": "Translation set: phrases whose meaning shifts with the surrounding passage. Each example pairs the phrase with the passage that disambiguates it, a context-free reference gloss, the contextual reading to reward, and rubric notes for the LLM-as-judge (faithfulness / contextual correctness / fluency). Many wordings are acceptable — these are references, not single canonical answers.",
+  "examples": [
+    {
+      "id": "translation-yisi-001",
+      "fullText": "这是我的一点小意思，请你收下。",
+      "phrase": "意思",
+      "referenceTranslation": "meaning; idea",
+      "referenceContextualMeaning": "Here 一点小意思 is an idiom for a small gift or token of one's regard, not the literal meaning \"meaning\".",
+      "rubricNotes": "Reward a reading like \"a small token / gesture of goodwill\". Penalise translating 意思 literally as \"meaning\" or \"idea\", which is wrong in this gift-giving context."
+    },
+    {
+      "id": "translation-dongxi-002",
+      "fullText": "桌子上放着很多东西，我们得收拾一下。",
+      "phrase": "东西",
+      "referenceTranslation": "east and west (literal characters)",
+      "referenceContextualMeaning": "东西 here means \"things / stuff\", the common compound sense — not the directions east and west.",
+      "rubricNotes": "Reward \"things\" / \"stuff\". Penalise the literal \"east and west\" reading; the context (objects on a table) fixes the compound meaning."
+    },
+    {
+      "id": "translation-lao-003",
+      "fullText": "他老是迟到，大家都有点生气了。",
+      "phrase": "老是",
+      "referenceTranslation": "old (character 老)",
+      "referenceContextualMeaning": "老是 is an adverb meaning \"always / constantly\", expressing repeated, annoying behaviour — nothing to do with age.",
+      "rubricNotes": "Reward \"always\" / \"keeps (doing)\". Penalise any \"old\" reading; here 老 is grammaticalised as an adverb of frequency."
+    },
+    {
+      "id": "translation-suanle-004",
+      "fullText": "算了，这件事我们就不再追究了。",
+      "phrase": "算了",
+      "referenceTranslation": "it is calculated; counted",
+      "referenceContextualMeaning": "算了 is a set phrase meaning \"forget it / let it go / never mind\", signalling the speaker drops the matter.",
+      "rubricNotes": "Reward \"forget it\" / \"let it go\" / \"never mind\". Penalise a literal \"calculated / counted\" reading."
+    },
+    {
+      "id": "translation-shoufa-005",
+      "fullText": "他不择手段，只为达到自己的目的。",
+      "phrase": "不择手段",
+      "referenceTranslation": "to not choose one's means",
+      "referenceContextualMeaning": "不择手段 is a 成语 meaning \"by any means necessary / unscrupulously\", carrying a clearly negative, condemnatory tone here.",
+      "rubricNotes": "Reward \"by any means necessary\" / \"stopping at nothing\" / \"unscrupulous\". Penalise a literal word-by-word gloss that loses the idiomatic and pejorative sense."
+    }
+  ]
+}

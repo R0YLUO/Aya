@@ -442,7 +442,7 @@
   {
     "taskId": "evals-seed-datasets",
     "description": "Add small-but-real seed eval datasets to packages/evals/datasets: an OCR set (book-page images with gold fullText, including a blurry and a no-Chinese case), a segmentation/analysis set (passages with gold phrase boundaries + expected pinyin, emphasising 成语/compounds/proper nouns), and a translation set (context-dependent phrases with rubric reference notes).",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "evals-package-scaffold"
     ],

@@ -8,16 +8,21 @@
 export {
   loadOcrDataset,
   loadAnalysisDataset,
+  loadTranslationDataset,
   OcrDatasetSchema,
   AnalysisDatasetSchema,
+  TranslationDatasetSchema,
   OcrExampleSchema,
   AnalysisExampleSchema,
+  TranslationExampleSchema,
 } from './datasets.js';
 export type {
   OcrDataset,
   AnalysisDataset,
+  TranslationDataset,
   OcrExample,
   AnalysisExample,
+  TranslationExample,
 } from './datasets.js';
 
 export {

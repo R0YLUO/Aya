@@ -68,6 +68,8 @@ test('runEvals: perfect offline run scores 100% with injected runners', async ()
   assert.equal(report.analysis.totalIdiomSplits, 0);
   assert.equal(report.analysis.reconstructionPassRate, 1);
 
+  assert.ok(report.translation.exampleCount >= 1);
+
   assert.equal(report.langsmith.enabled, false);
   assert.equal(report.langsmith.registered, false);
 });

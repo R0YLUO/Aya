@@ -1,7 +1,7 @@
 {
   "name": "analysis",
   "version": "v1",
-  "description": "Segmentation/analysis set: fullText paired with gold phrase boundaries (the `original` of each word token, in order) and expected pinyin, with attention to four-character idioms kept whole. Reconstruction (boundaries.join('') === fullText) holds for every example.",
+  "description": "Segmentation/analysis set: fullText paired with gold phrase boundaries (the `original` of each token, in order) and expected pinyin, emphasising four-character idioms (成语) kept whole, compounds, and proper nouns. Reconstruction (goldBoundaries.join('') === fullText) holds for every example.",
   "examples": [
     {
       "id": "analysis-idiom-001",
@@ -16,15 +16,66 @@
       }
     },
     {
-      "id": "analysis-compound-001",
+      "id": "analysis-idiom-pair-002",
       "pageId": "eval-page-002",
-      "fullText": "今天天气很好。",
-      "goldBoundaries": ["今天", "天气", "很", "好", "。"],
+      "fullText": "他做事总是画蛇添足，结果弄巧成拙。",
+      "goldBoundaries": [
+        "他",
+        "做事",
+        "总是",
+        "画蛇添足",
+        "，",
+        "结果",
+        "弄巧成拙",
+        "。"
+      ],
+      "goldPinyin": {
+        "画蛇添足": "huà shé tiān zú",
+        "弄巧成拙": "nòng qiǎo chéng zhuō"
+      }
+    },
+    {
+      "id": "analysis-compound-003",
+      "pageId": "eval-page-003",
+      "fullText": "今天天气很好，我们一起去公园散步吧。",
+      "goldBoundaries": [
+        "今天",
+        "天气",
+        "很",
+        "好",
+        "，",
+        "我们",
+        "一起",
+        "去",
+        "公园",
+        "散步",
+        "吧",
+        "。"
+      ],
       "goldPinyin": {
         "今天": "jīn tiān",
         "天气": "tiān qì",
         "很": "hěn",
-        "好": "hǎo"
+        "好": "hǎo",
+        "我们": "wǒ men",
+        "一起": "yì qǐ",
+        "去": "qù",
+        "公园": "gōng yuán",
+        "散步": "sàn bù",
+        "吧": "ba"
+      }
+    },
+    {
+      "id": "analysis-proper-noun-004",
+      "pageId": "eval-page-004",
+      "fullText": "鲁迅望着远处的群山。",
+      "goldBoundaries": ["鲁迅", "望着", "远处", "的", "群山", "。"],
+      "goldPinyin": {
+        "鲁迅": "Lǔ Xùn",
+        "望着": "wàng zhe",
+        "远处": "yuǎn chù",
+        "的": "de",
+        "群山": "qún shān"
       }
     }
   ]
