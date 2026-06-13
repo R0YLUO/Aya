@@ -196,6 +196,39 @@ export function idiomSplitCount(
   return split;
 }
 
+/** The segmentation-stage score: boundary precision/recall/F1 plus idiom splits. */
+export interface SegmentationScore extends BoundaryScore {
+  /**
+   * How many gold idioms (multi-character whole phrases) the prediction split.
+   * Must stay 0 — any positive value is a hard failure (specs/06-evals.md:
+   * idioms are never split), independent of the F1 score.
+   */
+  idiomSplitCount: number;
+}
+
+/**
+ * Score a predicted segmentation against a gold one — the single entry point the
+ * analysis/segmentation eval stage should use. `goldBoundaries` is the gold token
+ * list (ordered `original` strings whose join reconstructs the page text); the
+ * predicted tokens are scored against it.
+ *
+ * Returns phrase-boundary `precision`/`recall`/`f1` (via {@link boundaryF1}) plus
+ * an `idiomSplitCount`: the number of gold multi-character phrases the prediction
+ * failed to keep whole (via {@link idiomSplitCount}, with every multi-char gold
+ * token treated as an idiom to keep intact). A perfect match yields `f1` 1.0 and
+ * `idiomSplitCount` 0; any split idiom is a hard failure callers must surface.
+ */
+export function scoreSegmentation(
+  predTokens: readonly string[],
+  goldBoundaries: readonly string[],
+): SegmentationScore {
+  const goldIdioms = goldBoundaries.filter((t) => t.length > 1);
+  return {
+    ...boundaryF1(predTokens, goldBoundaries),
+    idiomSplitCount: idiomSplitCount(predTokens, goldIdioms),
+  };
+}
+
 /**
  * The structural invariant — phrases.join("") === fullText, indexes 1-based and
  * contiguous. Delegates to the shared check so eval and production agree. An

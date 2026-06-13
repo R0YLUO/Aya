@@ -462,7 +462,7 @@
   {
     "taskId": "evals-scorer-segmentation",
     "description": "Implement the segmentation scorer in packages/evals: phrase-boundary precision/recall/F1 versus gold boundaries plus an explicit idiom-split counter that must stay at zero.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "evals-seed-datasets"
     ],

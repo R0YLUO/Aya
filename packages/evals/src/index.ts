@@ -34,10 +34,12 @@ export {
   CER_ACCURACY_TARGET,
   boundaryF1,
   idiomSplitCount,
+  scoreSegmentation,
   reconstructionPass,
 } from './scorers.js';
 export type {
   BoundaryScore,
+  SegmentationScore,
   CerScore,
   CerExample,
   CerSummary,

@@ -32,7 +32,7 @@ import {
 import {
   scoreCER,
   CER_ACCURACY_TARGET,
-  boundaryF1,
+  scoreSegmentation,
   idiomSplitCount,
   reconstructionPass,
 } from './scorers.js';
@@ -153,11 +153,11 @@ async function scoreAnalysis(
   }
 
   const predictedBoundaries = phrases.map((p) => p.original);
-  const goldIdioms = example.goldBoundaries.filter((t) => t.length > 1);
+  const seg = scoreSegmentation(predictedBoundaries, example.goldBoundaries);
   return {
     id: example.id,
-    boundaryF1: boundaryF1(predictedBoundaries, example.goldBoundaries).f1,
-    idiomSplits: idiomSplitCount(predictedBoundaries, goldIdioms),
+    boundaryF1: seg.f1,
+    idiomSplits: seg.idiomSplitCount,
     reconstructionOk: reconstructionPass(example.fullText, phrases),
   };
 }

@@ -2,8 +2,8 @@
 title: "@aya/evals"
 type: package
 packages: [evals]
-tasks: [evals-package-scaffold, evals-seed-datasets, evals-scorer-cer]
-summary: Eval workspace — versioned JSON datasets (OCR, analysis/segmentation, translation), deterministic scorers (CER scoreCER/summariseCer with ≥95% target flagging, boundary F1 + idiom-split, reconstruction), an offline-capable runner over the real runOcr/analyzeText, and optional LangSmith dataset registration. `npm run eval` works locally with no keys.
+tasks: [evals-package-scaffold, evals-seed-datasets, evals-scorer-cer, evals-scorer-segmentation]
+summary: Eval workspace — versioned JSON datasets (OCR, analysis/segmentation, translation), deterministic scorers (CER scoreCER/summariseCer with ≥95% target flagging, scoreSegmentation = boundary precision/recall/F1 + idiom-split hard-fail, reconstruction), an offline-capable runner over the real runOcr/analyzeText, and optional LangSmith dataset registration. `npm run eval` works locally with no keys.
 updated: 2026-06-13
 ---
 
@@ -46,8 +46,13 @@ fully offline when its env is absent.
   predictions), `summariseCer` (batch → `CerSummary` flagging every example below
   `CER_ACCURACY_TARGET = 0.95`, the PRD KPI), `boundaryF1` (compares interior cut offsets of
   two segmentations over the same text), `idiomSplitCount` (gold multi-char tokens not kept
-  whole — must stay 0), `reconstructionPass` (delegates to shared `checkReconstruction`).
-  The LLM-as-judge translation scorer is intentionally NOT here yet (needs the Anthropic key).
+  whole — must stay 0), `scoreSegmentation(predTokens, goldBoundaries)` (the analysis-stage
+  entry point → `{ precision, recall, f1, idiomSplitCount }`; derives the must-keep-whole
+  idioms as every multi-char gold token, so a split idiom is a hard failure independent of
+  F1), `reconstructionPass` (delegates to shared `checkReconstruction`). `run-evals`'
+  `scoreAnalysis` scores via `scoreSegmentation` (one call) rather than `boundaryF1` +
+  `idiomSplitCount` separately. The LLM-as-judge translation scorer is intentionally NOT
+  here yet (needs the Anthropic key).
 - `src/langsmith.ts` — `isLangSmithEnabled(env)` (needs `LANGCHAIN_TRACING_V2=true` +
   a `LANGCHAIN_API_KEY`/`LANGSMITH_API_KEY`) and `registerLangSmithDataset()` which
   **dynamic-imports** `langsmith` and no-ops (returns `false`) when disabled, so the

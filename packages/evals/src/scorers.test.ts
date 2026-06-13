@@ -10,6 +10,7 @@ import {
   CER_ACCURACY_TARGET,
   boundaryF1,
   idiomSplitCount,
+  scoreSegmentation,
   reconstructionPass,
 } from './scorers.js';
 
@@ -133,6 +134,37 @@ test('idiomSplitCount: counts gold idioms not kept whole', () => {
   assert.equal(idiomSplitCount(['他', '画', '蛇', '添', '足'], ['画蛇添足']), 1);
   // single-character "idioms" are ignored.
   assert.equal(idiomSplitCount(['好'], ['好']), 0);
+});
+
+test('scoreSegmentation: perfect match => F1 1.0 and idiomSplitCount 0', () => {
+  const gold = ['他', '做事', '总是', '画蛇添足', '。'];
+  const s = scoreSegmentation([...gold], gold);
+  assert.equal(s.precision, 1);
+  assert.equal(s.recall, 1);
+  assert.equal(s.f1, 1);
+  assert.equal(s.idiomSplitCount, 0);
+});
+
+test('scoreSegmentation: off-by-one boundary lowers F1 but keeps idioms whole', () => {
+  // gold keeps the single-char tokens 很 / 好 separate; the prediction drops the
+  // boundary between them (merging into 很好) — a one-off boundary miss — while
+  // still keeping the idiom 画蛇添足 intact and not splitting any gold idiom.
+  const gold = ['画蛇添足', '很', '好', '。'];
+  const pred = ['画蛇添足', '很好', '。'];
+  const s = scoreSegmentation(pred, gold);
+  assert.ok(s.f1 < 1, 'a dropped boundary must lower F1');
+  assert.ok(s.f1 > 0);
+  assert.equal(s.precision, 1); // every predicted boundary is correct
+  assert.ok(s.recall < 1); // one gold boundary (很|好) was missed
+  assert.equal(s.idiomSplitCount, 0); // the idiom 画蛇添足 was kept whole
+});
+
+test('scoreSegmentation: splitting a gold idiom is counted as a hard failure', () => {
+  const gold = ['他', '画蛇添足'];
+  const pred = ['他', '画', '蛇', '添', '足'];
+  const s = scoreSegmentation(pred, gold);
+  assert.equal(s.idiomSplitCount, 1);
+  assert.ok(s.f1 < 1);
 });
 
 function phrase(index: number, original: string): Phrase {
