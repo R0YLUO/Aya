@@ -2,7 +2,7 @@
 title: "@aya/evals"
 type: package
 packages: [evals]
-tasks: [evals-package-scaffold, evals-seed-datasets, evals-scorer-cer, evals-scorer-segmentation, evals-scorer-pinyin, evals-scorer-translation-judge, evals-reconstruction-and-report]
+tasks: [evals-package-scaffold, evals-seed-datasets, evals-scorer-cer, evals-scorer-segmentation, evals-scorer-pinyin, evals-scorer-translation-judge, evals-reconstruction-and-report, ci-evals-gate]
 summary: Eval workspace — versioned JSON datasets (OCR, analysis/segmentation, translation), deterministic scorers (CER scoreCER/summariseCer with ≥95% target flagging, scoreSegmentation = boundary precision/recall/F1 + idiom-split hard-fail, scorePinyin/summarisePinyin = library-reference pinyin check with polyphone exceptions, reconstruction) plus an LLM-as-judge translation scorer (scoreTranslation), an offline-capable runner over the real runOcr/analyzeText (+ judge), a six-metric aggregate report compared against a stored baseline (regression-tolerance + absolute thresholds, exit non-zero on failure), and optional LangSmith dataset registration. `npm run eval` works locally with no keys.
 updated: 2026-06-13
 ---
@@ -125,6 +125,18 @@ fully offline when its env is absent.
   per-metric regression tolerances.
 - `src/index.ts` — barrel re-exporting datasets, scorers, pinyin, translation (judge),
   langsmith, runner, and the report/baseline gate.
+
+## CI gate (ci-evals-gate)
+
+The accuracy gate is wired in `.github/workflows/evals.yml` (NOT in `ci.yml`, whose core
+typecheck/lint/build must run on every PR). It is **path-filtered at the trigger level** to
+`packages/llm/**`, `packages/evals/**`, `packages/shared/**`, so the job is skipped entirely on
+unrelated PRs. On a matching PR/push it runs `npm run test -w @aya/evals` (the deterministic
+baseline-gate self-tests — where the "simulated regression fails / passing run succeeds"
+guarantee lives, via `report.test.ts`) then `npm run eval -w packages/evals` (real model path
+when `ANTHROPIC_API_KEY` secret + model-id vars are set; else skipped stages, still exits 0).
+See `brain/concepts/ci-pipeline.md` for the full as-built description and the `ci-first-run`
+handoff for the pending real run.
 
 ## Conventions
 

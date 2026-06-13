@@ -87,7 +87,7 @@ so dev traffic and dev evals never touch prod data or prod dashboards.
 | `typecheck` | `turbo run typecheck` — the shared-types contract holds across all packages |
 | `lint` | `turbo run lint` |
 | `build` | `turbo run build` |
-| **evals** | `npm run eval -w packages/evals` — **required on any PR touching `packages/llm`** (see [`06-evals.md`](./06-evals.md)) |
+| **evals** | `npm run eval -w packages/evals` — **required on any PR touching `packages/llm`** (see [`06-evals.md`](./06-evals.md)). Wired as a path-filtered GitHub Actions job (`.github/workflows/evals.yml`) that runs only when `packages/llm`/`evals`/`shared` change; it runs the baseline-gate self-tests + the eval CLI and fails on any regression-beyond-tolerance or absolute-threshold breach. |
 | deploy | SST deploy to `dev`, then promote to `prod` |
 
 Turborepo caching keeps CI fast by only rebuilding/testing what changed (North Star:

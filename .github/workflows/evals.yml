@@ -1,0 +1,90 @@
+name: Evals gate
+
+# The accuracy gate (CLAUDE.md golden rule #2, specs/06-evals.md "Lifecycle
+# integration"): "no prompt/chain/model change without an eval run". This job
+# runs ONLY when a PR (or a push to main) touches the LLM pipeline — its prompts,
+# output schemas, or model config in packages/llm — or the eval suite / shared
+# contracts that the gate itself depends on. On those changes it runs the eval
+# suite, which:
+#   1. exercises the deterministic baseline gate (packages/evals unit tests) —
+#      this is where the "a simulated regression fails the build, a passing run
+#      succeeds" guarantee is proven offline (see report.test.ts:
+#      `compareToBaseline: a regression beyond tolerance fails` / `... is within
+#      baseline + threshold` and friends); and
+#   2. runs `npm run eval -w packages/evals`, which loads the datasets, runs the
+#      real runOcr/analyzeText when an ANTHROPIC_API_KEY secret is present, and
+#      compares the six headline metrics to datasets/baseline.json — exiting
+#      non-zero on any regression-beyond-tolerance or absolute-threshold breach.
+#
+# Path filtering is done at the trigger level so the whole job is skipped (not
+# just early-exited) when the LLM pipeline is untouched, keeping unrelated PRs
+# fast. The core typecheck/lint/build pipeline lives in ci.yml and runs on every
+# PR regardless.
+
+on:
+  pull_request:
+    paths:
+      - 'packages/llm/**'
+      - 'packages/evals/**'
+      - 'packages/shared/**'
+  push:
+    branches: [main]
+    paths:
+      - 'packages/llm/**'
+      - 'packages/evals/**'
+      - 'packages/shared/**'
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: evals-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  evals:
+    name: eval suite (accuracy gate)
+    runs-on: ubuntu-latest
+    env:
+      TURBO_TELEMETRY_DISABLED: 1
+      # The real model path runs only when this secret is configured (see the
+      # anthropic-api-key handoff). Absent it, the model stages are SKIPPED and
+      # not gated, but the deterministic baseline-gate self-tests still run.
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      AYA_OCR_MODEL: ${{ vars.AYA_OCR_MODEL }}
+      AYA_ANALYSIS_MODEL: ${{ vars.AYA_ANALYSIS_MODEL }}
+      AYA_JUDGE_MODEL: ${{ vars.AYA_JUDGE_MODEL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Restore turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}-
+            turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The baseline-gate self-tests: these prove, offline and deterministically,
+      # that a regression beyond tolerance (or a threshold breach) fails and a
+      # passing run succeeds — the heart of the accuracy gate.
+      - name: Baseline-gate self-tests
+        run: npm run test -w @aya/evals
+
+      # The eval run itself: real model stages when ANTHROPIC_API_KEY is set,
+      # else skipped stages + the baseline comparison. Exits non-zero on any
+      # regression or threshold breach.
+      - name: Run eval suite
+        run: npm run eval -w packages/evals

@@ -518,7 +518,7 @@
   {
     "taskId": "ci-evals-gate",
     "description": "Add the CI eval gate that runs `npm run eval -w packages/evals` on any PR touching packages/llm (prompts, schemas, model config) and fails the build on score-below-threshold or regression beyond tolerance versus the baseline.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "evals-reconstruction-and-report",
       "ci-core-pipeline"
