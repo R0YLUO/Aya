@@ -482,7 +482,7 @@
   {
     "taskId": "evals-scorer-translation-judge",
     "description": "Implement the LLM-as-judge translation scorer in packages/evals: a fixed rubric (faithfulness, contextual correctness, fluency) scored at temperature 0 with a config-driven judge model id, returning per-dimension scores against a threshold.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "evals-seed-datasets"
     ],

@@ -28,6 +28,7 @@ import {
   loadTranslationDataset,
   type OcrExample,
   type AnalysisExample,
+  type TranslationExample,
 } from './datasets.js';
 import {
   scoreCER,
@@ -37,6 +38,11 @@ import {
   reconstructionPass,
 } from './scorers.js';
 import { summarisePinyin } from './pinyin.js';
+import {
+  scoreTranslation,
+  DEFAULT_JUDGE_THRESHOLD,
+  type JudgeRubric,
+} from './translation.js';
 import { isLangSmithEnabled, registerLangSmithDataset } from './langsmith.js';
 
 export interface OcrEvalRow {
@@ -91,12 +97,27 @@ export interface EvalReport {
     pinyinMismatchRate: number;
   };
   /**
-   * Translation set is loaded/validated and (when enabled) registered, but the
-   * LLM-as-judge scorer is deferred to a later task (needs the Anthropic key), so
-   * only the example count is reported here for now.
+   * Translation set is always loaded/validated and (when enabled) registered.
+   * The LLM-as-judge scorer runs only when a judge runner is injected OR a real
+   * Anthropic key + judge model id are present; otherwise `rows` is empty and the
+   * summary notes the skip. `referenceContextualMeaning` is graded as the
+   * candidate translation (the contextual reading we want the model to produce).
    */
-  translation: { exampleCount: number };
+  translation: {
+    exampleCount: number;
+    rows: TranslationEvalRow[];
+    passRate: number;
+    threshold: number;
+  };
   langsmith: { enabled: boolean; registered: boolean };
+}
+
+export interface TranslationEvalRow {
+  id: string;
+  faithfulness: number;
+  contextualCorrectness: number;
+  fluency: number;
+  pass: boolean;
 }
 
 export interface RunEvalsOptions {
@@ -104,6 +125,10 @@ export interface RunEvalsOptions {
   ocrRunner?: StructuredRunner<OcrResult>;
   /** Inject an analysis runner (offline scoring / tests). */
   analysisRunner?: StructuredRunner<AnalysisResult>;
+  /** Inject a judge runner (offline scoring / tests) for the translation set. */
+  judgeRunner?: StructuredRunner<JudgeRubric>;
+  /** Threshold each judged dimension must meet to pass. Defaults to 4. */
+  judgeThreshold?: number;
   /** Dataset versions to load. */
   ocrVersion?: string;
   analysisVersion?: string;
@@ -193,6 +218,30 @@ async function scoreAnalysis(
   };
 }
 
+async function scoreTranslationExample(
+  example: TranslationExample,
+  runner: StructuredRunner<JudgeRubric> | undefined,
+  env: NodeJS.ProcessEnv,
+  threshold: number,
+): Promise<TranslationEvalRow> {
+  // We grade the contextual reading we want the model to produce. The judge
+  // resolves its model id from env unless a runner is injected.
+  const score = await scoreTranslation(
+    example.phrase,
+    example.fullText,
+    example.referenceContextualMeaning,
+    example.rubricNotes,
+    runner !== undefined ? { runner, threshold } : { env, threshold },
+  );
+  return {
+    id: example.id,
+    faithfulness: score.faithfulness,
+    contextualCorrectness: score.contextualCorrectness,
+    fluency: score.fluency,
+    pass: score.pass,
+  };
+}
+
 /**
  * Run the full eval suite and return a structured report. The model stages run
  * only when a runner is injected OR real model env is present; otherwise the
@@ -253,6 +302,11 @@ export async function runEvals(options: RunEvalsOptions = {}): Promise<EvalRepor
   const hasApiKey = Boolean(env['ANTHROPIC_API_KEY']);
   const canRunOcr = options.ocrRunner !== undefined || hasApiKey;
   const canRunAnalysis = options.analysisRunner !== undefined || hasApiKey;
+  // The judge additionally needs its (separate) model id from env.
+  const judgeThreshold = options.judgeThreshold ?? DEFAULT_JUDGE_THRESHOLD;
+  const canRunJudge =
+    options.judgeRunner !== undefined ||
+    (hasApiKey && Boolean(env['AYA_JUDGE_MODEL']));
 
   const ocrRows = canRunOcr
     ? await Promise.all(
@@ -263,6 +317,13 @@ export async function runEvals(options: RunEvalsOptions = {}): Promise<EvalRepor
     ? await Promise.all(
         analysisData.examples.map((e) =>
           scoreAnalysis(e, options.analysisRunner, env),
+        ),
+      )
+    : [];
+  const translationRows = canRunJudge
+    ? await Promise.all(
+        translationData.examples.map((e) =>
+          scoreTranslationExample(e, options.judgeRunner, env, judgeThreshold),
         ),
       )
     : [];
@@ -300,7 +361,12 @@ export async function runEvals(options: RunEvalsOptions = {}): Promise<EvalRepor
         pinyinMismatchRate: denom === 0 ? 0 : pinyinMismatches / denom,
       };
     })(),
-    translation: { exampleCount: translationData.examples.length },
+    translation: {
+      exampleCount: translationData.examples.length,
+      rows: translationRows,
+      passRate: mean(translationRows.map((r) => (r.pass ? 1 : 0))),
+      threshold: judgeThreshold,
+    },
     langsmith: { enabled: lsEnabled, registered },
   };
 }
@@ -346,9 +412,17 @@ export function printReport(report: EvalReport): void {
       })`,
     );
   }
-  console.log(
-    `Translation: ${report.translation.exampleCount} examples loaded (judge scorer deferred — needs ANTHROPIC_API_KEY)`,
-  );
+  if (report.translation.rows.length === 0) {
+    console.log(
+      `Translation: ${report.translation.exampleCount} examples loaded | judge skipped (no judge runner / ANTHROPIC_API_KEY + AYA_JUDGE_MODEL)`,
+    );
+  } else {
+    console.log(
+      `Translation: ${report.translation.rows.length} examples judged | pass rate ${pct(
+        report.translation.passRate,
+      )} (threshold ${report.translation.threshold}/5 per dimension)`,
+    );
+  }
   console.log(
     `LangSmith: ${report.langsmith.enabled ? 'enabled' : 'disabled'}${
       report.langsmith.registered ? ' (datasets registered)' : ''

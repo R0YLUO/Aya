@@ -57,6 +57,25 @@ export {
 } from './pinyin.js';
 export type { PinyinScore, PinyinExample, PinyinSummary } from './pinyin.js';
 
+export {
+  scoreTranslation,
+  loadJudgeConfig,
+  buildJudgeSystemPrompt,
+  buildJudgeUserMessage,
+  JudgeRubricSchema,
+  JUDGE_DIMENSIONS,
+  JUDGE_SCALE_MIN,
+  JUDGE_SCALE_MAX,
+  JUDGE_MAX_TOKENS,
+  DEFAULT_JUDGE_THRESHOLD,
+} from './translation.js';
+export type {
+  JudgeRubric,
+  JudgeDimension,
+  TranslationScore,
+  ScoreTranslationOptions,
+} from './translation.js';
+
 export { isLangSmithEnabled, registerLangSmithDataset } from './langsmith.js';
 export type { LangSmithEnv, RegisterDatasetInput } from './langsmith.js';
 

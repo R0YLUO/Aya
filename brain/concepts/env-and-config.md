@@ -1,10 +1,10 @@
 ---
 title: Environment variables & injected config
 type: concept
-packages: [llm, api, web, mobile]
-tasks: [llm-model-config, llm-langsmith-wiring]
+packages: [llm, api, web, mobile, evals]
+tasks: [llm-model-config, llm-langsmith-wiring, evals-scorer-translation-judge]
 summary: Every env var the system reads today, who reads it, and the edge-injection convention (services never read env themselves).
-updated: 2026-06-10
+updated: 2026-06-13
 ---
 
 # Env & config (as built)
@@ -20,7 +20,8 @@ defaulting to `process.env`, so tests pin values without mutating globals.
 |---|---|---|
 | `AYA_OCR_MODEL` | `llm/src/config.ts` (required) | Claude model id, OCR stage |
 | `AYA_ANALYSIS_MODEL` | `llm/src/config.ts` (required) | Claude model id, analysis stage |
-| `ANTHROPIC_API_KEY` | `llm/src/config.ts` (required) | Anthropic key (never logged) |
+| `AYA_JUDGE_MODEL` | `evals/src/translation.ts` (`loadJudgeConfig`, required for the real judge path) | Claude model id for the LLM-as-judge translation scorer |
+| `ANTHROPIC_API_KEY` | `llm/src/config.ts` + `evals` judge (required) | Anthropic key (never logged) |
 | `LANGCHAIN_TRACING_V2` | `llm/src/tracing.ts` (+ LangChain itself) | "true"/"1" enables LangSmith tracing |
 | `LANGCHAIN_API_KEY`, `LANGCHAIN_PROJECT` | LangChain directly | LangSmith destination |
 | `AYA_ENV` | `llm/src/tracing.ts` | env tag on traces (defaults "dev") |

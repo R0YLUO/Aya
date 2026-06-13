@@ -2,8 +2,8 @@
 title: "@aya/evals"
 type: package
 packages: [evals]
-tasks: [evals-package-scaffold, evals-seed-datasets, evals-scorer-cer, evals-scorer-segmentation, evals-scorer-pinyin]
-summary: Eval workspace — versioned JSON datasets (OCR, analysis/segmentation, translation), deterministic scorers (CER scoreCER/summariseCer with ≥95% target flagging, scoreSegmentation = boundary precision/recall/F1 + idiom-split hard-fail, scorePinyin/summarisePinyin = library-reference pinyin check with polyphone exceptions, reconstruction), an offline-capable runner over the real runOcr/analyzeText, and optional LangSmith dataset registration. `npm run eval` works locally with no keys.
+tasks: [evals-package-scaffold, evals-seed-datasets, evals-scorer-cer, evals-scorer-segmentation, evals-scorer-pinyin, evals-scorer-translation-judge]
+summary: Eval workspace — versioned JSON datasets (OCR, analysis/segmentation, translation), deterministic scorers (CER scoreCER/summariseCer with ≥95% target flagging, scoreSegmentation = boundary precision/recall/F1 + idiom-split hard-fail, scorePinyin/summarisePinyin = library-reference pinyin check with polyphone exceptions, reconstruction) plus an LLM-as-judge translation scorer (scoreTranslation), an offline-capable runner over the real runOcr/analyzeText (+ judge), and optional LangSmith dataset registration. `npm run eval` works locally with no keys.
 updated: 2026-06-13
 ---
 
@@ -16,8 +16,9 @@ fully offline when its env is absent.
 
 ## Status
 
-- Package, datasets, scorers, runner, and LangSmith wiring all built and unit-tested
-  **offline** (21 node:test cases). The model stages have **never run against the real
+- Package, datasets, scorers (incl. the LLM-as-judge translation scorer), runner, and
+  LangSmith wiring all built and unit-tested **offline** (56 node:test cases). The model
+  stages — OCR, analysis, **and the judge** — have **never run against the real
   Anthropic API** and no dataset has been pushed to a real LangSmith project — both
   gated on existing handoffs (anthropic-api-key, langsmith-account).
 
@@ -51,8 +52,20 @@ fully offline when its env is absent.
   idioms as every multi-char gold token, so a split idiom is a hard failure independent of
   F1), `reconstructionPass` (delegates to shared `checkReconstruction`). `run-evals`'
   `scoreAnalysis` scores via `scoreSegmentation` (one call) rather than `boundaryF1` +
-  `idiomSplitCount` separately. The LLM-as-judge translation scorer is intentionally NOT
-  here yet (needs the Anthropic key).
+  `idiomSplitCount` separately. The LLM-as-judge translation scorer lives in its own
+  file (`translation.ts`), not here — these are deterministic; the judge is a model call.
+- `src/translation.ts` — the LLM-as-judge translation scorer (specs/06-evals.md dimension
+  4). `scoreTranslation(phrase, context, candidate, referenceNotes, options)` runs a SECOND
+  Claude call (`StructuredRunner<JudgeRubric>`) that grades three fixed rubric dimensions —
+  `faithfulness`, `contextualCorrectness`, `fluency` — each an **integer 1–5**
+  (`JudgeRubricSchema`), plus a free-text `rationale`, then applies a per-dimension pass
+  threshold (`DEFAULT_JUDGE_THRESHOLD = 4`; every dimension must be ≥ threshold to `pass`).
+  Same DI/lazy-config pattern as `@aya/llm`: an injected `runner` grades fixed output with
+  zero network (tests), else `buildJudgeRunner` builds a real `createStructuredRunner` from
+  `loadJudgeConfig(env)` — which reads the judge model id from **`AYA_JUDGE_MODEL`** (never
+  hard-coded, golden rule #9) at fixed temperature 0. `buildJudgeSystemPrompt` /
+  `buildJudgeUserMessage` are diffable string builders (no model id baked in). Output is
+  defensively re-parsed with `JudgeRubricSchema` even though the runner validated.
 - `src/pinyin.ts` — the pinyin-correctness scorer (specs/06-evals.md dimension 3). Uses
   **pinyin-pro** (runtime dep) as the deterministic reference: `referencePinyin(token)` →
   the library's tone-symbol, space-separated reading; `characterReadings(char)` → all valid
@@ -77,10 +90,14 @@ fully offline when its env is absent.
   KPI), which `printReport` flags with a ⚠ line. Model stages run only when a runner is injected
   OR `ANTHROPIC_API_KEY` is set — otherwise the report section is empty and the summary
   says "skipped". The translation set is **loaded/validated on every run** (and registered
-  to LangSmith when enabled) but not scored — its `EvalReport.translation.exampleCount` is
-  reported; the LLM-as-judge scorer is deferred (needs the Anthropic key). The CLI exits
-  non-zero if `totalIdiomSplits > 0`.
-- `src/index.ts` — barrel re-exporting datasets, scorers, pinyin, langsmith, and runner.
+  to LangSmith when enabled) and **judged when possible**: the judge stage runs when a
+  `judgeRunner` is injected OR (`ANTHROPIC_API_KEY` AND `AYA_JUDGE_MODEL`) are both present
+  — grading each example's `referenceContextualMeaning` as the candidate. The report's
+  `translation` block carries `exampleCount`, `rows[]` (per-dimension scores + `pass`),
+  `passRate`, and `threshold`; `printReport` prints the pass rate or a "judge skipped" line.
+  The CLI exits non-zero if `totalIdiomSplits > 0`.
+- `src/index.ts` — barrel re-exporting datasets, scorers, pinyin, translation (judge),
+  langsmith, and runner.
 
 ## Conventions
 
