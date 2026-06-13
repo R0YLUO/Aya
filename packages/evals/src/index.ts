@@ -29,11 +29,20 @@ export {
   editDistance,
   characterErrorRate,
   characterAccuracy,
+  scoreCER,
+  summariseCer,
+  CER_ACCURACY_TARGET,
   boundaryF1,
   idiomSplitCount,
   reconstructionPass,
 } from './scorers.js';
-export type { BoundaryScore } from './scorers.js';
+export type {
+  BoundaryScore,
+  CerScore,
+  CerExample,
+  CerSummary,
+  CerSummaryRow,
+} from './scorers.js';
 
 export { isLangSmithEnabled, registerLangSmithDataset } from './langsmith.js';
 export type { LangSmithEnv, RegisterDatasetInput } from './langsmith.js';

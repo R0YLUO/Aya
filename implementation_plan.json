@@ -452,7 +452,7 @@
   {
     "taskId": "evals-scorer-cer",
     "description": "Implement the OCR Character Error Rate scorer in packages/evals: normalised edit distance between predicted and gold fullText, reporting character accuracy against the ≥95% target.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "evals-seed-datasets"
     ],

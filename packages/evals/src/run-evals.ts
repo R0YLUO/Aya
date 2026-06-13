@@ -30,7 +30,8 @@ import {
   type AnalysisExample,
 } from './datasets.js';
 import {
-  characterAccuracy,
+  scoreCER,
+  CER_ACCURACY_TARGET,
   boundaryF1,
   idiomSplitCount,
   reconstructionPass,
@@ -41,6 +42,12 @@ export interface OcrEvalRow {
   id: string;
   charAccuracy: number;
   statusMatch: boolean;
+}
+
+/** A single OCR example that fell below the ≥95% accuracy KPI. */
+export interface OcrBelowTargetRow {
+  id: string;
+  charAccuracy: number;
 }
 
 export interface AnalysisEvalRow {
@@ -55,6 +62,10 @@ export interface EvalReport {
     rows: OcrEvalRow[];
     meanCharAccuracy: number;
     statusAccuracy: number;
+    /** The accuracy KPI each OCR example is judged against (≥95%). */
+    accuracyTarget: number;
+    /** OCR examples whose char accuracy fell below the KPI. */
+    belowTarget: OcrBelowTargetRow[];
   };
   analysis: {
     rows: AnalysisEvalRow[];
@@ -111,7 +122,7 @@ async function scoreOcr(
   );
   return {
     id: example.id,
-    charAccuracy: characterAccuracy(result.fullText, example.expected.fullText),
+    charAccuracy: scoreCER(result.fullText, example.expected.fullText).accuracy,
     statusMatch: result.status === example.expected.status,
   };
 }
@@ -230,6 +241,10 @@ export async function runEvals(options: RunEvalsOptions = {}): Promise<EvalRepor
       rows: ocrRows,
       meanCharAccuracy: mean(ocrRows.map((r) => r.charAccuracy)),
       statusAccuracy: mean(ocrRows.map((r) => (r.statusMatch ? 1 : 0))),
+      accuracyTarget: CER_ACCURACY_TARGET,
+      belowTarget: ocrRows
+        .filter((r) => r.charAccuracy < CER_ACCURACY_TARGET)
+        .map((r) => ({ id: r.id, charAccuracy: r.charAccuracy })),
     },
     analysis: {
       rows: analysisRows,
@@ -255,8 +270,17 @@ export function printReport(report: EvalReport): void {
     console.log(
       `OCR     : ${report.ocr.rows.length} examples | char acc ${pct(
         report.ocr.meanCharAccuracy,
-      )} | status acc ${pct(report.ocr.statusAccuracy)}`,
+      )} | status acc ${pct(report.ocr.statusAccuracy)} | target ${pct(
+        report.ocr.accuracyTarget,
+      )}`,
     );
+    if (report.ocr.belowTarget.length > 0) {
+      console.log(
+        `          ⚠ ${report.ocr.belowTarget.length} below target: ${report.ocr.belowTarget
+          .map((r) => `${r.id} (${pct(r.charAccuracy)})`)
+          .join(', ')}`,
+      );
+    }
   }
   if (report.analysis.rows.length === 0) {
     console.log('Analysis: skipped (no ANTHROPIC_API_KEY / injected runner)');

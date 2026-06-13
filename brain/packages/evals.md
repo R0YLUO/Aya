@@ -2,8 +2,8 @@
 title: "@aya/evals"
 type: package
 packages: [evals]
-tasks: [evals-package-scaffold, evals-seed-datasets]
-summary: Eval workspace — versioned JSON datasets (OCR, analysis/segmentation, translation), deterministic scorers (CER, boundary F1 + idiom-split, reconstruction), an offline-capable runner over the real runOcr/analyzeText, and optional LangSmith dataset registration. `npm run eval` works locally with no keys.
+tasks: [evals-package-scaffold, evals-seed-datasets, evals-scorer-cer]
+summary: Eval workspace — versioned JSON datasets (OCR, analysis/segmentation, translation), deterministic scorers (CER scoreCER/summariseCer with ≥95% target flagging, boundary F1 + idiom-split, reconstruction), an offline-capable runner over the real runOcr/analyzeText, and optional LangSmith dataset registration. `npm run eval` works locally with no keys.
 updated: 2026-06-13
 ---
 
@@ -41,8 +41,11 @@ fully offline when its env is absent.
     `referenceTranslation`, the `referenceContextualMeaning` to reward, and `rubricNotes` for
     the (deferred) LLM-as-judge scorer.
 - `src/scorers.ts` — pure functions: `editDistance`, `characterErrorRate` /
-  `characterAccuracy` (CER), `boundaryF1` (compares interior cut offsets of two
-  segmentations over the same text), `idiomSplitCount` (gold multi-char tokens not kept
+  `characterAccuracy` (CER primitives), `scoreCER` (the OCR-stage entry point →
+  `{ cer, accuracy }`; accuracy clamped to [0,1], CER may exceed 1 for over-long
+  predictions), `summariseCer` (batch → `CerSummary` flagging every example below
+  `CER_ACCURACY_TARGET = 0.95`, the PRD KPI), `boundaryF1` (compares interior cut offsets of
+  two segmentations over the same text), `idiomSplitCount` (gold multi-char tokens not kept
   whole — must stay 0), `reconstructionPass` (delegates to shared `checkReconstruction`).
   The LLM-as-judge translation scorer is intentionally NOT here yet (needs the Anthropic key).
 - `src/langsmith.ts` — `isLangSmithEnabled(env)` (needs `LANGCHAIN_TRACING_V2=true` +
@@ -50,7 +53,9 @@ fully offline when its env is absent.
   **dynamic-imports** `langsmith` and no-ops (returns `false`) when disabled, so the
   offline path never loads the client.
 - `src/run-evals.ts` — `runEvals(options)` → structured `EvalReport`; `printReport`;
-  the `isMain()`-guarded CLI entrypoint. Model stages run only when a runner is injected
+  the `isMain()`-guarded CLI entrypoint. The OCR section scores via `scoreCER` and the report
+  carries `ocr.accuracyTarget` (0.95) + `ocr.belowTarget[]` (ids/accuracy of pages under the
+  KPI), which `printReport` flags with a ⚠ line. Model stages run only when a runner is injected
   OR `ANTHROPIC_API_KEY` is set — otherwise the report section is empty and the summary
   says "skipped". The translation set is **loaded/validated on every run** (and registered
   to LangSmith when enabled) but not scored — its `EvalReport.translation.exampleCount` is

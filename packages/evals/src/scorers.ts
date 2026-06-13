@@ -47,6 +47,92 @@ export function characterAccuracy(predicted: string, expected: string): number {
   return Math.max(0, 1 - characterErrorRate(predicted, expected));
 }
 
+/**
+ * PRD KPI: clear pages must reach ≥95% OCR character accuracy
+ * (specs/06-evals.md, north star "Accurate"). Used by `summariseCer` to flag
+ * examples that fall short.
+ */
+export const CER_ACCURACY_TARGET = 0.95;
+
+/** The CER score for a single example: error rate plus derived accuracy. */
+export interface CerScore {
+  /**
+   * Character Error Rate (edit distance / gold length); 0 is perfect. Can exceed
+   * 1 when the prediction is much longer than the gold (more edits than gold
+   * characters) — this is the standard CER definition, normalised by gold length.
+   */
+  cer: number;
+  /** Character accuracy = 1 - CER, clamped to [0, 1]; 1 is perfect, never negative. */
+  accuracy: number;
+}
+
+/**
+ * Score one OCR prediction against its gold `fullText`, returning both the CER
+ * and the derived accuracy. `accuracy` is always in [0, 1]; `cer` is ≥0 and may
+ * exceed 1 for wildly long predictions. Identical strings score accuracy 1.0;
+ * an empty gold scores accuracy 1.0 only when the prediction is also empty.
+ * This is the single entry point the OCR eval stage should use.
+ */
+export function scoreCER(predicted: string, expected: string): CerScore {
+  const cer = characterErrorRate(predicted, expected);
+  return { cer, accuracy: Math.max(0, 1 - cer) };
+}
+
+/** One row of a CER summary: an example id, its score, and whether it passed. */
+export interface CerSummaryRow {
+  id: string;
+  cer: number;
+  accuracy: number;
+  /** True when `accuracy >= target`. */
+  passed: boolean;
+}
+
+/** Aggregate CER summary over a set of OCR examples. */
+export interface CerSummary {
+  rows: CerSummaryRow[];
+  /** Mean character accuracy across all examples (0 when empty). */
+  meanAccuracy: number;
+  /** The accuracy threshold each example is judged against. */
+  target: number;
+  /** Examples whose accuracy fell below `target` — the ones needing attention. */
+  belowTarget: CerSummaryRow[];
+  /** True when every example met `target` (vacuously true when empty). */
+  allPassed: boolean;
+}
+
+/** One predicted/gold pair to score, identified for the summary. */
+export interface CerExample {
+  id: string;
+  predicted: string;
+  expected: string;
+}
+
+/**
+ * Score a batch of OCR examples and summarise them, flagging every example whose
+ * character accuracy fell below `target` (default {@link CER_ACCURACY_TARGET}).
+ * The summary surfaces the laggards (`belowTarget`) so a run can report — or gate
+ * on — pages that miss the PRD's ≥95% accuracy KPI.
+ */
+export function summariseCer(
+  examples: readonly CerExample[],
+  target: number = CER_ACCURACY_TARGET,
+): CerSummary {
+  const rows: CerSummaryRow[] = examples.map((e) => {
+    const { cer, accuracy } = scoreCER(e.predicted, e.expected);
+    return { id: e.id, cer, accuracy, passed: accuracy >= target };
+  });
+  const meanAccuracy =
+    rows.length === 0 ? 0 : rows.reduce((a, r) => a + r.accuracy, 0) / rows.length;
+  const belowTarget = rows.filter((r) => !r.passed);
+  return {
+    rows,
+    meanAccuracy,
+    target,
+    belowTarget,
+    allPassed: belowTarget.length === 0,
+  };
+}
+
 export interface BoundaryScore {
   /** Boundary precision: fraction of predicted cut points that are correct. */
   precision: number;
