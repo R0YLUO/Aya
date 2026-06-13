@@ -46,6 +46,17 @@ export type {
   CerSummaryRow,
 } from './scorers.js';
 
+export {
+  normalizePinyin,
+  referencePinyin,
+  characterReadings,
+  stripTones,
+  scorePinyin,
+  summarisePinyin,
+  DEFAULT_POLYPHONE_EXCEPTIONS,
+} from './pinyin.js';
+export type { PinyinScore, PinyinExample, PinyinSummary } from './pinyin.js';
+
 export { isLangSmithEnabled, registerLangSmithDataset } from './langsmith.js';
 export type { LangSmithEnv, RegisterDatasetInput } from './langsmith.js';
 

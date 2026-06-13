@@ -67,6 +67,10 @@ test('runEvals: perfect offline run scores 100% with injected runners', async ()
   assert.equal(report.analysis.meanBoundaryF1, 1);
   assert.equal(report.analysis.totalIdiomSplits, 0);
   assert.equal(report.analysis.reconstructionPassRate, 1);
+  // The gold pinyin agrees with the library reference, so no mismatches.
+  assert.ok(report.analysis.pinyinScored >= 1, 'pinyin tokens were scored');
+  assert.equal(report.analysis.pinyinMismatches, 0);
+  assert.equal(report.analysis.pinyinMismatchRate, 0);
 
   assert.ok(report.translation.exampleCount >= 1);
 

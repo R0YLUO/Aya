@@ -472,7 +472,7 @@
   {
     "taskId": "evals-scorer-pinyin",
     "description": "Implement the deterministic pinyin scorer in packages/evals comparing model pinyin to a pinyin library's output for the same characters, with a known-polyphone exception list, reporting a mismatch rate.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "evals-seed-datasets"
     ],

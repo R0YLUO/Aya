@@ -2,8 +2,8 @@
 title: "@aya/evals"
 type: package
 packages: [evals]
-tasks: [evals-package-scaffold, evals-seed-datasets, evals-scorer-cer, evals-scorer-segmentation]
-summary: Eval workspace — versioned JSON datasets (OCR, analysis/segmentation, translation), deterministic scorers (CER scoreCER/summariseCer with ≥95% target flagging, scoreSegmentation = boundary precision/recall/F1 + idiom-split hard-fail, reconstruction), an offline-capable runner over the real runOcr/analyzeText, and optional LangSmith dataset registration. `npm run eval` works locally with no keys.
+tasks: [evals-package-scaffold, evals-seed-datasets, evals-scorer-cer, evals-scorer-segmentation, evals-scorer-pinyin]
+summary: Eval workspace — versioned JSON datasets (OCR, analysis/segmentation, translation), deterministic scorers (CER scoreCER/summariseCer with ≥95% target flagging, scoreSegmentation = boundary precision/recall/F1 + idiom-split hard-fail, scorePinyin/summarisePinyin = library-reference pinyin check with polyphone exceptions, reconstruction), an offline-capable runner over the real runOcr/analyzeText, and optional LangSmith dataset registration. `npm run eval` works locally with no keys.
 updated: 2026-06-13
 ---
 
@@ -53,6 +53,20 @@ fully offline when its env is absent.
   `scoreAnalysis` scores via `scoreSegmentation` (one call) rather than `boundaryF1` +
   `idiomSplitCount` separately. The LLM-as-judge translation scorer is intentionally NOT
   here yet (needs the Anthropic key).
+- `src/pinyin.ts` — the pinyin-correctness scorer (specs/06-evals.md dimension 3). Uses
+  **pinyin-pro** (runtime dep) as the deterministic reference: `referencePinyin(token)` →
+  the library's tone-symbol, space-separated reading; `characterReadings(char)` → all valid
+  readings of a single char (`multiple`); `normalizePinyin` (lower-case/collapse-ws/trim, so
+  proper-noun capitalisation and spacing never count as a mismatch) and `stripTones` (NFD
+  strip of combining diacritics). `scorePinyin(token, predicted)` → `{ token, predicted,
+  reference, match, polyphoneException }`: a match is an exact normalised hit, OR a single-char
+  alternate reading, OR a `DEFAULT_POLYPHONE_EXCEPTIONS` entry (or a tone-only diff for a listed
+  token) — those three set `polyphoneException`. `summarisePinyin(tokens)` → `{ total, matched,
+  polyphoneExceptions, mismatches, mismatchRate }`; `mismatchRate` excludes polyphone exceptions
+  from the denominator (PRD target: near-0). `run-evals`'s `scoreAnalysis` scores every
+  predicted phrase with a non-null pinyin AND a Han character against the library and rolls
+  `pinyinScored`/`pinyinMismatches`/`pinyinMismatchRate` into `EvalReport.analysis` (printed
+  under the Analysis line).
 - `src/langsmith.ts` — `isLangSmithEnabled(env)` (needs `LANGCHAIN_TRACING_V2=true` +
   a `LANGCHAIN_API_KEY`/`LANGSMITH_API_KEY`) and `registerLangSmithDataset()` which
   **dynamic-imports** `langsmith` and no-ops (returns `false`) when disabled, so the
@@ -66,7 +80,7 @@ fully offline when its env is absent.
   to LangSmith when enabled) but not scored — its `EvalReport.translation.exampleCount` is
   reported; the LLM-as-judge scorer is deferred (needs the Anthropic key). The CLI exits
   non-zero if `totalIdiomSplits > 0`.
-- `src/index.ts` — barrel re-exporting datasets, scorers, langsmith, and runner.
+- `src/index.ts` — barrel re-exporting datasets, scorers, pinyin, langsmith, and runner.
 
 ## Conventions
 
@@ -86,4 +100,15 @@ fully offline when its env is absent.
   load it.
 - `boundaryF1` assumes both segmentations cover the **same** underlying text (true by
   construction — both reconstruct `fullText`); it compares cut-point offsets, not tokens.
-- The dependency rule holds: evals depends on `@aya/llm` + `@aya/shared` only.
+- `pinyin-pro` is the one **runtime** third-party dep (besides zod) — the pinyin scorer
+  imports it eagerly (it is small and offline, no network/data download), unlike the lazy
+  `langsmith` import. It is the deterministic reference; the eval check is NOT an LLM judge.
+- pinyin-pro lower-cases readings and applies tone sandhi (`一起` → `yì qǐ`); `normalizePinyin`
+  makes the comparison case/space-insensitive but tone-sensitive, so genuine tone errors still
+  fail while proper-noun capitalisation (gold `Lǔ Xùn` vs library `lǔ xùn`) does not.
+- The polyphone strategy is two-layered: single-char tokens accept any reading the character
+  has; multi-char tokens only get forgiveness from the small, explicit
+  `DEFAULT_POLYPHONE_EXCEPTIONS` list — extend that list as real eval cases surface, rather
+  than loosening the matcher.
+- The dependency rule holds: evals depends on `@aya/llm` + `@aya/shared` only (plus zod +
+  pinyin-pro as leaf libraries).

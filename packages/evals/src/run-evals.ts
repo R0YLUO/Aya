@@ -36,6 +36,7 @@ import {
   idiomSplitCount,
   reconstructionPass,
 } from './scorers.js';
+import { summarisePinyin } from './pinyin.js';
 import { isLangSmithEnabled, registerLangSmithDataset } from './langsmith.js';
 
 export interface OcrEvalRow {
@@ -55,6 +56,12 @@ export interface AnalysisEvalRow {
   boundaryF1: number;
   idiomSplits: number;
   reconstructionOk: boolean;
+  /** Predicted-phrase pinyin tokens scored against the library reference. */
+  pinyinScored: number;
+  /** Of those, genuine mismatches (polyphone exceptions excluded). */
+  pinyinMismatches: number;
+  /** Polyphone exceptions among the scored tokens (excused, reported). */
+  pinyinPolyphoneExceptions: number;
 }
 
 export interface EvalReport {
@@ -72,6 +79,16 @@ export interface EvalReport {
     meanBoundaryF1: number;
     totalIdiomSplits: number;
     reconstructionPassRate: number;
+    /** Total predicted pinyin tokens scored against the library reference. */
+    pinyinScored: number;
+    /** Genuine pinyin mismatches across all examples (polyphones excluded). */
+    pinyinMismatches: number;
+    /**
+     * Pinyin mismatch rate over scorable (non-polyphone) tokens; the PRD targets
+     * near-0 (near-100% pinyin correctness on common vocabulary). 0 when nothing
+     * was scored.
+     */
+    pinyinMismatchRate: number;
   };
   /**
    * Translation set is loaded/validated and (when enabled) registered, but the
@@ -147,6 +164,9 @@ async function scoreAnalysis(
         boundaryF1: 0,
         idiomSplits: idiomSplitCount([], example.goldBoundaries),
         reconstructionOk: false,
+        pinyinScored: 0,
+        pinyinMismatches: 0,
+        pinyinPolyphoneExceptions: 0,
       };
     }
     throw err;
@@ -154,11 +174,22 @@ async function scoreAnalysis(
 
   const predictedBoundaries = phrases.map((p) => p.original);
   const seg = scoreSegmentation(predictedBoundaries, example.goldBoundaries);
+
+  // Pinyin check: score every predicted phrase that has a pinyin AND contains a
+  // Chinese character (punctuation tokens carry no reading) against the library.
+  const pinyinTokens = phrases
+    .filter((p) => p.pinyin !== null && /\p{Script=Han}/u.test(p.original))
+    .map((p) => ({ token: p.original, predicted: p.pinyin as string }));
+  const pinyin = summarisePinyin(pinyinTokens);
+
   return {
     id: example.id,
     boundaryF1: seg.f1,
     idiomSplits: seg.idiomSplitCount,
     reconstructionOk: reconstructionPass(example.fullText, phrases),
+    pinyinScored: pinyin.total,
+    pinyinMismatches: pinyin.mismatches,
+    pinyinPolyphoneExceptions: pinyin.polyphoneExceptions,
   };
 }
 
@@ -246,14 +277,29 @@ export async function runEvals(options: RunEvalsOptions = {}): Promise<EvalRepor
         .filter((r) => r.charAccuracy < CER_ACCURACY_TARGET)
         .map((r) => ({ id: r.id, charAccuracy: r.charAccuracy })),
     },
-    analysis: {
-      rows: analysisRows,
-      meanBoundaryF1: mean(analysisRows.map((r) => r.boundaryF1)),
-      totalIdiomSplits: analysisRows.reduce((a, r) => a + r.idiomSplits, 0),
-      reconstructionPassRate: mean(
-        analysisRows.map((r) => (r.reconstructionOk ? 1 : 0)),
-      ),
-    },
+    analysis: (() => {
+      const pinyinScored = analysisRows.reduce((a, r) => a + r.pinyinScored, 0);
+      const pinyinExcused = analysisRows.reduce(
+        (a, r) => a + r.pinyinPolyphoneExceptions,
+        0,
+      );
+      const pinyinMismatches = analysisRows.reduce(
+        (a, r) => a + r.pinyinMismatches,
+        0,
+      );
+      const denom = pinyinScored - pinyinExcused;
+      return {
+        rows: analysisRows,
+        meanBoundaryF1: mean(analysisRows.map((r) => r.boundaryF1)),
+        totalIdiomSplits: analysisRows.reduce((a, r) => a + r.idiomSplits, 0),
+        reconstructionPassRate: mean(
+          analysisRows.map((r) => (r.reconstructionOk ? 1 : 0)),
+        ),
+        pinyinScored,
+        pinyinMismatches,
+        pinyinMismatchRate: denom === 0 ? 0 : pinyinMismatches / denom,
+      };
+    })(),
     translation: { exampleCount: translationData.examples.length },
     langsmith: { enabled: lsEnabled, registered },
   };
@@ -291,6 +337,13 @@ export function printReport(report: EvalReport): void {
       )} | idiom splits ${report.analysis.totalIdiomSplits} | reconstruction ${pct(
         report.analysis.reconstructionPassRate,
       )}`,
+    );
+    console.log(
+      `          pinyin: ${report.analysis.pinyinScored} tokens | mismatch rate ${pct(
+        report.analysis.pinyinMismatchRate,
+      )} (${report.analysis.pinyinMismatches} mismatch${
+        report.analysis.pinyinMismatches === 1 ? '' : 'es'
+      })`,
     );
   }
   console.log(
