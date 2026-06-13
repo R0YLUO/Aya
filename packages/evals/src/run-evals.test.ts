@@ -118,5 +118,38 @@ test('runEvals: a split idiom is detected and lowers boundary F1', async () => {
   assert.ok(row.idiomSplits >= 1, 'idiom split should be counted');
   assert.ok(row.boundaryF1 < 1, 'boundary F1 should drop on over-segmentation');
   assert.equal(row.reconstructionOk, true, 'over-segmentation still reconstructs');
+  assert.equal(row.passed, true, 'a reconstructing example is not auto-failed');
   assert.ok(report.analysis.totalIdiomSplits >= 1);
+});
+
+test('runEvals: a reconstruction failure marks the example failed regardless of quality', async () => {
+  const analysisData = await loadAnalysisDataset();
+
+  // Runner that drops the last character of fullText — perfect-looking tokens
+  // (good pinyin), but tokens.join('') !== fullText, so analyzeText throws and
+  // the example must be marked failed independent of any quality score.
+  const analysisRunner: StructuredRunner<AnalysisResult> = {
+    async invoke(messages) {
+      const text = humanText(messages);
+      const ex = analysisData.examples.find((e) => text.startsWith(e.fullText))!;
+      const tokens: PhraseToken[] = ex.goldBoundaries
+        .slice(0, -1) // drop a token → reconstruction can never match
+        .map((original, i) => ({
+          index: i + 1,
+          original,
+          pinyin: ex.goldPinyin[original] ?? null,
+          translation: null,
+          contextualMeaning: null,
+        }));
+      return { tokens };
+    },
+  };
+
+  const report = await runEvals({ analysisRunner, env: {} });
+  assert.ok(report.analysis.rows.length >= 1);
+  for (const row of report.analysis.rows) {
+    assert.equal(row.reconstructionOk, false, `${row.id} should fail reconstruction`);
+    assert.equal(row.passed, false, `${row.id} should be auto-failed`);
+  }
+  assert.equal(report.analysis.reconstructionPassRate, 0);
 });

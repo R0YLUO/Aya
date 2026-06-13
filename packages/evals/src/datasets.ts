@@ -100,7 +100,7 @@ export type TranslationExample = z.infer<typeof TranslationExampleSchema>;
 export type TranslationDataset = z.infer<typeof TranslationDatasetSchema>;
 
 /** Walk up from this module to the package root (the dir holding `datasets/`). */
-async function findDatasetsDir(): Promise<string> {
+export async function findDatasetsDir(): Promise<string> {
   let dir = dirname(fileURLToPath(import.meta.url));
   for (let i = 0; i < 6; i++) {
     const candidate = join(dir, 'datasets');

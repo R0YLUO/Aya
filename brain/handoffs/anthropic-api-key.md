@@ -3,8 +3,8 @@ title: Anthropic API key + model ids for real LLM verification
 type: handoff
 status: open
 packages: [llm]
-tasks: [llm-run-ocr, llm-analyze-text]
-summary: runOcr, analyzeText, and the evals LLM-as-judge translation scorer are done but have only ever run against mocked runners — they have never hit the real Anthropic API.
+tasks: [llm-run-ocr, llm-analyze-text, evals-reconstruction-and-report]
+summary: runOcr, analyzeText, and the evals LLM-as-judge translation scorer are done but have only ever run against mocked runners — they have never hit the real Anthropic API. The eval baseline gate is built but its recorded metric VALUES are placeholders until a real run captures them.
 updated: 2026-06-13
 ---
 
@@ -35,5 +35,8 @@ With the vars set (incl. `AYA_JUDGE_MODEL`), an agent runs a one-off smoke (no s
 exists yet — an agent can write a throwaway one): `runOcr` on a sample book-page photo and
 `analyzeText` on a short Chinese paragraph; confirm an `ok` OCR result and a `Phrase[]`
 passing the reconstruction invariant. Also run `npm run eval -w @aya/evals` and confirm the
-Translation section reports a pass rate (judge stage no longer skipped). Then mark this
-handoff resolved.
+Translation section reports a pass rate (judge stage no longer skipped) and the baseline
+comparison runs over real metrics. **Then re-capture the baseline**: replace the placeholder
+metric values in `packages/evals/datasets/baseline.json` with the observed scores from this
+first real run (keep the gates), so future runs gate against reality rather than the
+spec-bar placeholders. Then mark this handoff resolved.

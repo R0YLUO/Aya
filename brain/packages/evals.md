@@ -2,8 +2,8 @@
 title: "@aya/evals"
 type: package
 packages: [evals]
-tasks: [evals-package-scaffold, evals-seed-datasets, evals-scorer-cer, evals-scorer-segmentation, evals-scorer-pinyin, evals-scorer-translation-judge]
-summary: Eval workspace — versioned JSON datasets (OCR, analysis/segmentation, translation), deterministic scorers (CER scoreCER/summariseCer with ≥95% target flagging, scoreSegmentation = boundary precision/recall/F1 + idiom-split hard-fail, scorePinyin/summarisePinyin = library-reference pinyin check with polyphone exceptions, reconstruction) plus an LLM-as-judge translation scorer (scoreTranslation), an offline-capable runner over the real runOcr/analyzeText (+ judge), and optional LangSmith dataset registration. `npm run eval` works locally with no keys.
+tasks: [evals-package-scaffold, evals-seed-datasets, evals-scorer-cer, evals-scorer-segmentation, evals-scorer-pinyin, evals-scorer-translation-judge, evals-reconstruction-and-report]
+summary: Eval workspace — versioned JSON datasets (OCR, analysis/segmentation, translation), deterministic scorers (CER scoreCER/summariseCer with ≥95% target flagging, scoreSegmentation = boundary precision/recall/F1 + idiom-split hard-fail, scorePinyin/summarisePinyin = library-reference pinyin check with polyphone exceptions, reconstruction) plus an LLM-as-judge translation scorer (scoreTranslation), an offline-capable runner over the real runOcr/analyzeText (+ judge), a six-metric aggregate report compared against a stored baseline (regression-tolerance + absolute thresholds, exit non-zero on failure), and optional LangSmith dataset registration. `npm run eval` works locally with no keys.
 updated: 2026-06-13
 ---
 
@@ -16,11 +16,12 @@ fully offline when its env is absent.
 
 ## Status
 
-- Package, datasets, scorers (incl. the LLM-as-judge translation scorer), runner, and
-  LangSmith wiring all built and unit-tested **offline** (56 node:test cases). The model
-  stages — OCR, analysis, **and the judge** — have **never run against the real
-  Anthropic API** and no dataset has been pushed to a real LangSmith project — both
-  gated on existing handoffs (anthropic-api-key, langsmith-account).
+- Package, datasets, scorers (incl. the LLM-as-judge translation scorer), runner, the
+  six-metric report + baseline gate, and LangSmith wiring all built and unit-tested
+  **offline** (69 node:test cases). The model stages — OCR, analysis, **and the judge** —
+  have **never run against the real Anthropic API**, so the baseline's metric VALUES are
+  placeholders (its gates are real) and no dataset has been pushed to a real LangSmith
+  project — both gated on existing handoffs (anthropic-api-key, langsmith-account).
 
 ## What lives where
 
@@ -94,10 +95,36 @@ fully offline when its env is absent.
   `judgeRunner` is injected OR (`ANTHROPIC_API_KEY` AND `AYA_JUDGE_MODEL`) are both present
   — grading each example's `referenceContextualMeaning` as the candidate. The report's
   `translation` block carries `exampleCount`, `rows[]` (per-dimension scores + `pass`),
-  `passRate`, and `threshold`; `printReport` prints the pass rate or a "judge skipped" line.
-  The CLI exits non-zero if `totalIdiomSplits > 0`.
+  `passRate`, `threshold`, and now a `scoreDistribution` (mean of each judge dimension — the
+  sixth headline metric); `printReport` prints the pass rate + the dimension means or a "judge
+  skipped" line. Each `AnalysisEvalRow` now carries a `passed` boolean = `reconstructionOk`:
+  the **reconstruction invariant is the hard gate** — a reconstruction failure (`analyzeText`
+  threw `AnalysisFailedError`) marks the example failed regardless of segmentation/pinyin
+  quality (specs/06-evals.md). `printReport` prints a per-example reconstruction ✓/✗ line.
+  The CLI no longer hand-rolls the idiom-split exit — it loads `baseline.json`, runs
+  `compareToBaseline(extractMetrics(report), baseline)`, prints the comparison, and exits
+  non-zero on any finding (the idiom-split ceiling-0 and reconstruction floor-1.0 gates
+  subsume the old check).
+- `src/report.ts` — the **baseline gate** (specs/06-evals.md "Reporting"). `extractMetrics(report)`
+  flattens the six headline metrics from an `EvalReport` (OCR mean char accuracy, analysis mean
+  boundary F1, total idiom splits, pinyin mismatch rate, reconstruction pass rate, translation pass
+  rate + judge score distribution); a **skipped stage** (no rows) becomes `null` so a baseline never
+  forces a stage to have run. `loadBaseline()` reads/validates `datasets/baseline.json`
+  (`BaselineSchema` — recorded `metrics` + per-metric `gates`). `compareToBaseline(metrics, baseline)`
+  → `{ ok, findings[], skipped[] }`: each scalar metric is gated by a `MetricGate`
+  (`direction: 'higher'|'lower'`, `tolerance` = allowed slack vs baseline before it counts as a
+  regression, optional `threshold` = absolute floor for `higher` / ceiling for `lower`); the judge
+  distribution gates each of the three dimensions with one shared gate. A finding is either a
+  `regression` (moved past baseline ± tolerance) or a `threshold` breach. `null` (skipped) metrics
+  go to `skipped` and are NOT gated — that is why the offline `npm run eval` (all model stages
+  skipped) still exits 0. `printComparison` prints PASS / the findings.
+- `datasets/baseline.json` — the stored baseline (sibling of the versioned dataset dirs, loaded by
+  `findDatasetsDir`, now exported from `datasets.ts`). Its metric VALUES are placeholders pending the
+  first real Anthropic run (encode PRD/spec bars, not observed scores); its GATES are the real CI
+  knobs — idiom splits ceiling 0 (tolerance 0), reconstruction floor 1.0, OCR floor 0.95, plus
+  per-metric regression tolerances.
 - `src/index.ts` — barrel re-exporting datasets, scorers, pinyin, translation (judge),
-  langsmith, and runner.
+  langsmith, runner, and the report/baseline gate.
 
 ## Conventions
 

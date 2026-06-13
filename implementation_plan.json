@@ -492,7 +492,7 @@
   {
     "taskId": "evals-reconstruction-and-report",
     "description": "Add the reconstruction-invariant check to every analysis eval example (automatic fail on violation independent of quality scores) and implement the aggregate eval report (CER, boundary F1, idiom-split count, pinyin mismatch rate, judge score distribution, reconstruction pass rate) compared against a stored baseline, exiting non-zero on regression beyond tolerance.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "evals-scorer-cer",
       "evals-scorer-segmentation",

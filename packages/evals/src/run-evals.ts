@@ -44,6 +44,12 @@ import {
   type JudgeRubric,
 } from './translation.js';
 import { isLangSmithEnabled, registerLangSmithDataset } from './langsmith.js';
+import {
+  extractMetrics,
+  compareToBaseline,
+  loadBaseline,
+  printComparison,
+} from './report.js';
 
 export interface OcrEvalRow {
   id: string;
@@ -62,6 +68,15 @@ export interface AnalysisEvalRow {
   boundaryF1: number;
   idiomSplits: number;
   reconstructionOk: boolean;
+  /**
+   * Whether this example passed overall. The reconstruction invariant
+   * (`tokens.join('') === fullText`) is a HARD gate (specs/06-evals.md): a
+   * reconstruction failure marks the example failed regardless of any quality
+   * score. `passed` is `reconstructionOk` — quality metrics are reported but do
+   * not (on their own) fail an individual example here; aggregate thresholds and
+   * the baseline comparison gate the run as a whole.
+   */
+  passed: boolean;
   /** Predicted-phrase pinyin tokens scored against the library reference. */
   pinyinScored: number;
   /** Of those, genuine mismatches (polyphone exceptions excluded). */
@@ -108,8 +123,21 @@ export interface EvalReport {
     rows: TranslationEvalRow[];
     passRate: number;
     threshold: number;
+    /**
+     * Judge score distribution — the mean of each rubric dimension across the
+     * judged examples (specs/06-evals.md reporting line "judge score
+     * distribution"). 0 for every dimension when nothing was judged.
+     */
+    scoreDistribution: JudgeScoreDistribution;
   };
   langsmith: { enabled: boolean; registered: boolean };
+}
+
+/** Mean rubric score per judged dimension, on the 1–5 scale (0 when none judged). */
+export interface JudgeScoreDistribution {
+  faithfulness: number;
+  contextualCorrectness: number;
+  fluency: number;
 }
 
 export interface TranslationEvalRow {
@@ -189,6 +217,8 @@ async function scoreAnalysis(
         boundaryF1: 0,
         idiomSplits: idiomSplitCount([], example.goldBoundaries),
         reconstructionOk: false,
+        // Reconstruction failed → automatic example fail (specs/06-evals.md).
+        passed: false,
         pinyinScored: 0,
         pinyinMismatches: 0,
         pinyinPolyphoneExceptions: 0,
@@ -207,11 +237,16 @@ async function scoreAnalysis(
     .map((p) => ({ token: p.original, predicted: p.pinyin as string }));
   const pinyin = summarisePinyin(pinyinTokens);
 
+  const reconstructionOk = reconstructionPass(example.fullText, phrases);
+
   return {
     id: example.id,
     boundaryF1: seg.f1,
     idiomSplits: seg.idiomSplitCount,
-    reconstructionOk: reconstructionPass(example.fullText, phrases),
+    reconstructionOk,
+    // The reconstruction invariant is the hard gate: an example that fails it is
+    // failed regardless of how good its segmentation/pinyin/translation look.
+    passed: reconstructionOk,
     pinyinScored: pinyin.total,
     pinyinMismatches: pinyin.mismatches,
     pinyinPolyphoneExceptions: pinyin.polyphoneExceptions,
@@ -366,6 +401,13 @@ export async function runEvals(options: RunEvalsOptions = {}): Promise<EvalRepor
       rows: translationRows,
       passRate: mean(translationRows.map((r) => (r.pass ? 1 : 0))),
       threshold: judgeThreshold,
+      scoreDistribution: {
+        faithfulness: mean(translationRows.map((r) => r.faithfulness)),
+        contextualCorrectness: mean(
+          translationRows.map((r) => r.contextualCorrectness),
+        ),
+        fluency: mean(translationRows.map((r) => r.fluency)),
+      },
     },
     langsmith: { enabled: lsEnabled, registered },
   };
@@ -411,6 +453,17 @@ export function printReport(report: EvalReport): void {
         report.analysis.pinyinMismatches === 1 ? '' : 'es'
       })`,
     );
+    // Per-example reconstruction pass/fail — a fail is an automatic example fail.
+    const reconFailures = report.analysis.rows.filter((r) => !r.reconstructionOk);
+    if (reconFailures.length > 0) {
+      console.log(
+        `          ✗ ${reconFailures.length} reconstruction FAIL (auto-fail): ${reconFailures
+          .map((r) => r.id)
+          .join(', ')}`,
+      );
+    } else {
+      console.log('          ✓ all examples passed the reconstruction invariant');
+    }
   }
   if (report.translation.rows.length === 0) {
     console.log(
@@ -421,6 +474,14 @@ export function printReport(report: EvalReport): void {
       `Translation: ${report.translation.rows.length} examples judged | pass rate ${pct(
         report.translation.passRate,
       )} (threshold ${report.translation.threshold}/5 per dimension)`,
+    );
+    const d = report.translation.scoreDistribution;
+    console.log(
+      `          judge scores (mean/5): faithfulness ${d.faithfulness.toFixed(
+        2,
+      )} | contextual ${d.contextualCorrectness.toFixed(
+        2,
+      )} | fluency ${d.fluency.toFixed(2)}`,
     );
   }
   console.log(
@@ -438,13 +499,17 @@ function isMain(): boolean {
 }
 
 if (isMain()) {
-  runEvals({ register: true })
-    .then((report) => {
+  Promise.all([runEvals({ register: true }), loadBaseline()])
+    .then(([report, baseline]) => {
       printReport(report);
-      // Idiom splits must stay at zero; a non-zero count fails the run.
-      if (report.analysis.totalIdiomSplits > 0) {
+      // Gate the run against the stored baseline: any metric regression beyond
+      // tolerance, or any absolute threshold breach (including the idiom-split
+      // ceiling of 0 and the reconstruction floor of 1.0), fails the run.
+      const comparison = compareToBaseline(extractMetrics(report), baseline);
+      printComparison(comparison);
+      if (!comparison.ok) {
         console.error(
-          `\nFAIL: ${report.analysis.totalIdiomSplits} idiom split(s) detected.`,
+          `\nFAIL: ${comparison.findings.length} metric gate failure(s) vs baseline.`,
         );
         process.exit(1);
       }

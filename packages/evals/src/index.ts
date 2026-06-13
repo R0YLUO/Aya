@@ -84,5 +84,23 @@ export type {
   EvalReport,
   OcrEvalRow,
   AnalysisEvalRow,
+  TranslationEvalRow,
+  JudgeScoreDistribution,
   RunEvalsOptions,
 } from './run-evals.js';
+
+export {
+  extractMetrics,
+  compareToBaseline,
+  loadBaseline,
+  printComparison,
+  BaselineSchema,
+} from './report.js';
+export type {
+  EvalMetrics,
+  Baseline,
+  MetricGate,
+  MetricDirection,
+  MetricFinding,
+  BaselineComparison,
+} from './report.js';

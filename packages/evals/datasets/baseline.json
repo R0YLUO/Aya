@@ -1,0 +1,25 @@
+{
+  "description": "Initial eval baseline (2026-06-13). Metric VALUES are placeholders pending the first real Anthropic run (anthropic-api-key handoff) — they encode the PRD/spec quality bars, not yet observed scores. GATES define the CI regression tolerances + absolute floors/ceilings that gate every real run; reconstruction must stay perfect and idioms must never split.",
+  "metrics": {
+    "ocrMeanCharAccuracy": 0.95,
+    "analysisMeanBoundaryF1": 0.9,
+    "analysisTotalIdiomSplits": 0,
+    "analysisPinyinMismatchRate": 0.05,
+    "analysisReconstructionPassRate": 1.0,
+    "translationPassRate": 0.8,
+    "translationScoreDistribution": {
+      "faithfulness": 4.0,
+      "contextualCorrectness": 4.0,
+      "fluency": 4.0
+    }
+  },
+  "gates": {
+    "ocrMeanCharAccuracy": { "direction": "higher", "tolerance": 0.02, "threshold": 0.95 },
+    "analysisMeanBoundaryF1": { "direction": "higher", "tolerance": 0.03 },
+    "analysisTotalIdiomSplits": { "direction": "lower", "tolerance": 0, "threshold": 0 },
+    "analysisPinyinMismatchRate": { "direction": "lower", "tolerance": 0.02 },
+    "analysisReconstructionPassRate": { "direction": "higher", "tolerance": 0, "threshold": 1.0 },
+    "translationPassRate": { "direction": "higher", "tolerance": 0.1 },
+    "translationScoreDistribution": { "direction": "higher", "tolerance": 0.5 }
+  }
+}
