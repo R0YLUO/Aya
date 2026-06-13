@@ -506,7 +506,7 @@
   {
     "taskId": "ci-core-pipeline",
     "description": "Add a CI workflow that runs turbo typecheck, lint, and build across all packages on every PR, leveraging Turborepo caching.",
-    "status": "todo",
+    "status": "done",
     "dependencies": [
       "api-router",
       "web-package-scaffold",

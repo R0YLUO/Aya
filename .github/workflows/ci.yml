@@ -1,0 +1,60 @@
+name: CI
+
+# Core pipeline: typecheck, lint, and build every package on every PR (and on
+# pushes to main). Turborepo caching makes re-runs only rebuild what changed.
+# The shared-types contract is enforced here: a breaking change in @aya/shared
+# fails `typecheck` in its dependents, so the build goes red.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    name: typecheck · lint · build
+    runs-on: ubuntu-latest
+    env:
+      # Enable Turborepo's local filesystem cache and let it persist across the
+      # job via actions/cache (see the "Restore turbo cache" step below).
+      TURBO_TELEMETRY_DISABLED: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Restore turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          # Bust the cache when lockfile or turbo config changes; otherwise reuse
+          # the most recent cache for this OS.
+          key: turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}-
+            turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
