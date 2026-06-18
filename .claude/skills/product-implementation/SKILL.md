@@ -115,8 +115,10 @@ from the repo root:
 ```bash
 git add -A
 git commit -m "<type>(<scope>): <summary> [<taskId>]"
-git push
 ```
+
+Commit **directly to `main`** — no branch, no PR. **Do not `git push`**: pushing to `main` is
+blocked by the harness, so commits stay on local `main` and the human pushes when ready.
 
 - Use a concise Conventional-Commits-style subject and always include the `taskId` so the
   commit maps back to the plan (e.g. `chore(repo): add shared base tsconfig & lint config
@@ -126,7 +128,7 @@ git push
 - Commit only when the task is `done` and verification passed. If checks failed (see the
   guardrail below), leave the work uncommitted and the task in `progress`.
 - Follow the repo's commit conventions in `CLAUDE.md` (including the trailing `Co-Authored-By`
-  line). Push immediately after every successful commit to keep local and remote in sync.
+  line). Don't push — local `main` accumulates task commits; the human pushes them when ready.
 
 Then report: what was built, how it satisfies the acceptance criteria, **what level of
 verification was achieved (and any handoff recorded for the gap)**, the commit you made, and
@@ -152,8 +154,8 @@ Node's standard library (Node >= 22) — no install step.
   exit 3, the right move is to finish blockers, not to force a blocked task.
 - **Stop on failure.** If implementation or verification fails, leave the task in `progress`,
   report the failure, and let the user decide — don't mark it `done` and don't commit.
-- **One commit per completed task.** A task isn't finished until its work is committed and pushed (step 7).
-  Never commit a task that didn't pass verification.
+- **One commit per completed task.** A task isn't finished until its work is committed to `main` (step 7).
+  Never commit a task that didn't pass verification. (Don't push — commits stay local.)
 - **The brain is part of the task.** Don't skip step 6 — a task whose knowledge never lands in
   `brain/` forces the next agent to rediscover it from the code.
 - **Done ≠ verified end-to-end.** Marking a task done on mock-level verification without

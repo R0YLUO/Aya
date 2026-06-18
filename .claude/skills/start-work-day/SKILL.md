@@ -28,8 +28,9 @@ iteration failing, and your own context stays small no matter how many tasks run
    `git add -A`, so any pre-existing uncommitted changes would be silently swept into the next
    task's commit. If the tree is dirty, **stop and ask the user** to commit/stash first — do
    not proceed and do not stash for them.
-2. **Sync with the remote**: `git pull --ff-only` (sub-agents push after every task; start
-   from the latest state).
+2. **Sync with the remote**: `git pull --ff-only` while the local tree has no unpushed work, to
+   start from the latest state. (Sub-agents commit to local `main` and **do not push** — pushing
+   to `main` is blocked by the harness — so the human pushes accumulated commits when ready.)
 3. **Take the opening snapshot**:
 
    ```bash
@@ -50,8 +51,8 @@ iteration failing, and your own context stays small no matter how many tasks run
 ## The loop
 
 Each iteration: **check → dispatch → verify → decide**. Run sub-agents **sequentially and in
-the foreground** (no `run_in_background`, no parallel dispatch — every iteration commits and
-pushes to the same branch, and each task may depend on the previous one's output).
+the foreground** (no `run_in_background`, no parallel dispatch — every iteration commits to the
+same branch (local `main`, not pushed), and each task may depend on the previous one's output).
 
 ### 1. Check
 
@@ -77,8 +78,8 @@ this prompt, verbatim apart from the bracketed slot:
 >    `.claude/skills/product-implementation/SKILL.md` and follow it exactly): pick the next
 >    ready task with `next-task.js`, mark it `progress`, implement it to its
 >    `acceptanceCriteria`, verify, mark it `done`, update `brain/` (including any
->    `brain/handoffs/` entry), and finish with **one pushed commit** whose subject contains
->    the `[taskId]`.
+>    `brain/handoffs/` entry), and finish with **one commit to local `main`** (do NOT push)
+>    whose subject contains the `[taskId]`.
 > 3. Do exactly one task. Do not start a second.
 > 4. If you cannot complete the task — failed verification, unexpected blocker, something
 >    only a human can provide that prevents even mock-level completion — leave it in
