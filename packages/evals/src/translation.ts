@@ -1,12 +1,13 @@
 // LLM-as-judge translation scorer (specs/06-evals.md, dimension 4).
 //
 // Unlike CER / segmentation / pinyin — which are deterministic library checks —
-// translation quality is graded by a SECOND Claude call acting as a judge. The
+// translation quality is graded by a SECOND LLM call acting as a judge. The
 // judge scores three fixed rubric dimensions (faithfulness, contextual
 // correctness, fluency) on a fixed 1–5 scale and we apply a pass/fail threshold.
 //
 // Determinism & config (golden rules #7, #9): the judge runs at temperature 0
-// and its model id comes from env (`AYA_JUDGE_MODEL`) — never hard-coded here.
+// and its provider + model id come from env (`AYA_JUDGE_PROVIDER` /
+// `AYA_JUDGE_MODEL`) — never hard-coded here.
 // Following the same dependency-injection pattern the rest of the LLM code uses
 // (brain/concepts/structured-llm-output.md), callers may inject a `StructuredRunner`
 // so tests grade fixed judge output with zero network; the real runner is built
@@ -16,8 +17,10 @@ import { z } from 'zod';
 import {
   createStructuredRunner,
   withRetry,
+  parseProviderId,
+  PROVIDERS,
   type Env,
-  type StageConfig,
+  type ModelSpec,
   type StructuredRunner,
 } from '@aya/llm';
 
@@ -75,8 +78,8 @@ export interface TranslationScore {
 export interface ScoreTranslationOptions {
   /**
    * Inject a judge runner (offline scoring / tests). When omitted, a real
-   * ChatAnthropic runner is built from `env` — which then requires the judge
-   * model id + API key to be present.
+   * provider-agnostic runner is built from `env` — which then requires the judge
+   * provider, model id, and that provider's API key to be present.
    */
   runner?: StructuredRunner<JudgeRubric>;
   /** Env source for judge model config. Defaults to process.env. */
@@ -86,19 +89,26 @@ export interface ScoreTranslationOptions {
 }
 
 /**
- * Resolve the judge stage config from the environment. The judge model id is
- * CONFIGURATION (golden rule #9): it comes from `AYA_JUDGE_MODEL`, never a
- * literal in code. Temperature is fixed at 0 for repeatability (specs/06-evals.md).
+ * Resolve the judge model spec from the environment. The judge is provider-agnostic
+ * just like the pipeline: its provider comes from `AYA_JUDGE_PROVIDER` (falling back
+ * to `AYA_LLM_PROVIDER`) so it can be pinned to a fixed strong model while candidate
+ * models vary across an eval-comparison matrix. The judge model id is CONFIGURATION
+ * (golden rule #9): `AYA_JUDGE_MODEL`, never a literal in code. Temperature is fixed
+ * at 0 for repeatability (specs/06-evals.md); whether it is sent is per-provider.
  */
-export function loadJudgeConfig(env: Env = process.env): {
-  stage: StageConfig;
-  apiKey: string;
-} {
-  const model = requireEnv(env, 'AYA_JUDGE_MODEL');
-  const apiKey = requireEnv(env, 'ANTHROPIC_API_KEY');
+export function loadJudgeConfig(env: Env = process.env): ModelSpec {
+  const providerRaw =
+    env['AYA_JUDGE_PROVIDER']?.trim() || requireEnv(env, 'AYA_LLM_PROVIDER');
+  const provider = parseProviderId(providerRaw);
+  const info = PROVIDERS[provider];
   return {
-    stage: { model, temperature: 0, maxTokens: JUDGE_MAX_TOKENS },
-    apiKey,
+    provider,
+    model: requireEnv(env, 'AYA_JUDGE_MODEL'),
+    temperature: 0,
+    maxTokens: JUDGE_MAX_TOKENS,
+    apiKey: requireEnv(env, info.keyEnv),
+    sendTemperature: info.sendTemperature,
+    maxTokensField: info.maxTokensField,
   };
 }
 
@@ -173,7 +183,7 @@ export async function scoreTranslation(
   options: ScoreTranslationOptions = {},
 ): Promise<TranslationScore> {
   const threshold = options.threshold ?? DEFAULT_JUDGE_THRESHOLD;
-  const runner = options.runner ?? buildJudgeRunner(options.env);
+  const runner = options.runner ?? (await buildJudgeRunner(options.env));
 
   const messages = [
     { role: 'system', content: buildJudgeSystemPrompt() },
@@ -202,8 +212,7 @@ export async function scoreTranslation(
   };
 }
 
-/** Lazily build the real ChatAnthropic-backed judge runner from env config. */
-function buildJudgeRunner(env: Env = process.env): StructuredRunner<JudgeRubric> {
-  const { stage, apiKey } = loadJudgeConfig(env);
-  return createStructuredRunner(stage, apiKey, JudgeRubricSchema);
+/** Lazily build the real provider-agnostic judge runner from env config. */
+function buildJudgeRunner(env: Env = process.env): Promise<StructuredRunner<JudgeRubric>> {
+  return createStructuredRunner(loadJudgeConfig(env), JudgeRubricSchema);
 }

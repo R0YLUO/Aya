@@ -6,10 +6,14 @@
 
 export {
   loadLlmConfig,
+  hasModelCredentials,
+  parseProviderId,
+  PROVIDERS,
+  SUPPORTED_PROVIDERS,
   OCR_MAX_TOKENS,
   ANALYSIS_MAX_TOKENS,
 } from './config.js';
-export type { LlmConfig, StageConfig, Env } from './config.js';
+export type { LlmConfig, ModelSpec, ProviderId, ProviderInfo, Env } from './config.js';
 
 export {
   buildRunConfig,

@@ -21,6 +21,7 @@
     "lint": "eslint .",
     "test": "tsc -p tsconfig.test.json && node --test \"dist-test/**/*.test.js\"",
     "eval": "tsc -p tsconfig.json && node dist/run-evals.js",
+    "eval:compare": "tsc -p tsconfig.json && node dist/compare.js",
     "clean": "rm -rf dist dist-test .turbo"
   },
   "dependencies": {

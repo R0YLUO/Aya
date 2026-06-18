@@ -165,19 +165,32 @@ test('scoreTranslation: re-validates judge output (out-of-scale runner output th
   );
 });
 
-test('loadJudgeConfig: reads the judge model id from env and fixes temperature 0', () => {
+test('loadJudgeConfig: resolves provider + model + key, fixes temperature 0', () => {
   const cfg = loadJudgeConfig({
+    AYA_LLM_PROVIDER: 'anthropic',
     AYA_JUDGE_MODEL: 'judge-model-xyz',
     ANTHROPIC_API_KEY: 'sk-test',
   });
-  assert.equal(cfg.stage.model, 'judge-model-xyz');
-  assert.equal(cfg.stage.temperature, 0);
+  assert.equal(cfg.provider, 'anthropic');
+  assert.equal(cfg.model, 'judge-model-xyz');
+  assert.equal(cfg.temperature, 0);
+  assert.equal(cfg.apiKey, 'sk-test');
+});
+
+test('loadJudgeConfig: AYA_JUDGE_PROVIDER pins the judge independent of the pipeline', () => {
+  const cfg = loadJudgeConfig({
+    AYA_LLM_PROVIDER: 'openai',
+    AYA_JUDGE_PROVIDER: 'anthropic',
+    AYA_JUDGE_MODEL: 'judge-model-xyz',
+    ANTHROPIC_API_KEY: 'sk-test',
+  });
+  assert.equal(cfg.provider, 'anthropic');
   assert.equal(cfg.apiKey, 'sk-test');
 });
 
 test('loadJudgeConfig: throws when the judge model id is missing', () => {
   assert.throws(
-    () => loadJudgeConfig({ ANTHROPIC_API_KEY: 'sk-test' }),
+    () => loadJudgeConfig({ AYA_LLM_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: 'sk-test' }),
     /AYA_JUDGE_MODEL/,
   );
 });

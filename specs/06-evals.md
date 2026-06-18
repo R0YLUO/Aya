@@ -59,8 +59,13 @@ local iteration ──▶ PR (CI gate) ──▶ production ──▶ periodic d
 ```
 
 - **Local:** `npm run eval -w packages/evals` (optionally a fast subset) while editing prompts.
-- **CI gate:** any PR touching `packages/llm` (prompts, schemas, model config) **must** run the
-  eval suite. Scores below threshold, or any regression beyond a tolerance vs. the baseline,
+- **Compare providers/models:** `npm run eval:compare -w packages/evals` runs the *same* datasets
+  and scorers against each model in `models.compare.json` (provider + model ids; keys come from the
+  ambient env, no secrets in the file) and prints one side-by-side table. This is how we decide
+  whether switching provider (e.g. Anthropic → Gemini) holds quality on identical inputs — the
+  payoff of the provider-agnostic LLM layer (ADR-0012).
+- **CI gate:** any PR touching `packages/llm` (prompts, schemas, model/provider config) **must** run
+  the eval suite. Scores below threshold, or any regression beyond a tolerance vs. the baseline,
   **fail the build.** This is the mechanism that enforces "no prompt change without an eval."
 - **Drift:** periodically sample real (shared) production pages, re-score, and compare to
   baseline to catch model/version drift over time.

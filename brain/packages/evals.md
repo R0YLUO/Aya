@@ -2,9 +2,9 @@
 title: "@aya/evals"
 type: package
 packages: [evals]
-tasks: [evals-package-scaffold, evals-seed-datasets, evals-scorer-cer, evals-scorer-segmentation, evals-scorer-pinyin, evals-scorer-translation-judge, evals-reconstruction-and-report, ci-evals-gate]
-summary: Eval workspace — versioned JSON datasets (OCR, analysis/segmentation, translation), deterministic scorers (CER scoreCER/summariseCer with ≥95% target flagging, scoreSegmentation = boundary precision/recall/F1 + idiom-split hard-fail, scorePinyin/summarisePinyin = library-reference pinyin check with polyphone exceptions, reconstruction) plus an LLM-as-judge translation scorer (scoreTranslation), an offline-capable runner over the real runOcr/analyzeText (+ judge), a six-metric aggregate report compared against a stored baseline (regression-tolerance + absolute thresholds, exit non-zero on failure), and optional LangSmith dataset registration. `npm run eval` works locally with no keys.
-updated: 2026-06-13
+tasks: [evals-package-scaffold, evals-seed-datasets, evals-scorer-cer, evals-scorer-segmentation, evals-scorer-pinyin, evals-scorer-translation-judge, evals-reconstruction-and-report, ci-evals-gate, llm-provider-abstraction]
+summary: Eval workspace — versioned JSON datasets (OCR, analysis/segmentation, translation), deterministic scorers (CER scoreCER/summariseCer with ≥95% target flagging, scoreSegmentation = boundary precision/recall/F1 + idiom-split hard-fail, scorePinyin/summarisePinyin = library-reference pinyin check with polyphone exceptions, reconstruction) plus an LLM-as-judge translation scorer (scoreTranslation), an offline-capable PROVIDER-AGNOSTIC runner over the real runOcr/analyzeText (+ judge), a six-metric aggregate report compared against a stored baseline, a side-by-side model-comparison CLI (eval:compare / runEvalsMatrix), and optional LangSmith dataset registration. `npm run eval` works locally with no keys.
+updated: 2026-06-18
 ---
 
 # @aya/evals (as built)
@@ -62,9 +62,11 @@ fully offline when its env is absent.
   (`JudgeRubricSchema`), plus a free-text `rationale`, then applies a per-dimension pass
   threshold (`DEFAULT_JUDGE_THRESHOLD = 4`; every dimension must be ≥ threshold to `pass`).
   Same DI/lazy-config pattern as `@aya/llm`: an injected `runner` grades fixed output with
-  zero network (tests), else `buildJudgeRunner` builds a real `createStructuredRunner` from
-  `loadJudgeConfig(env)` — which reads the judge model id from **`AYA_JUDGE_MODEL`** (never
-  hard-coded, golden rule #9) at fixed temperature 0. `buildJudgeSystemPrompt` /
+  zero network (tests), else `buildJudgeRunner` `await`s a real `createStructuredRunner` from
+  `loadJudgeConfig(env)` — now **provider-agnostic**, returning a `ModelSpec` for
+  **`AYA_JUDGE_PROVIDER`** (→ `AYA_LLM_PROVIDER`) + **`AYA_JUDGE_MODEL`** (never hard-coded,
+  golden rule #9) at fixed temperature 0. Pinning `AYA_JUDGE_PROVIDER` keeps the judge fixed
+  while candidate models vary in `eval:compare`. `buildJudgeSystemPrompt` /
   `buildJudgeUserMessage` are diffable string builders (no model id baked in). Output is
   defensively re-parsed with `JudgeRubricSchema` even though the runner validated.
 - `src/pinyin.ts` — the pinyin-correctness scorer (specs/06-evals.md dimension 3). Uses
@@ -90,10 +92,12 @@ fully offline when its env is absent.
   carries `ocr.accuracyTarget` (0.95) + `ocr.belowTarget[]` (ids/accuracy of pages under the
   KPI), which `printReport` flags with a ⚠ line. Model stages run only when a runner is injected
   OR `ANTHROPIC_API_KEY` is set — otherwise the report section is empty and the summary
-  says "skipped". The translation set is **loaded/validated on every run** (and registered
-  to LangSmith when enabled) and **judged when possible**: the judge stage runs when a
-  `judgeRunner` is injected OR (`ANTHROPIC_API_KEY` AND `AYA_JUDGE_MODEL`) are both present
-  — grading each example's `referenceContextualMeaning` as the candidate. The report's
+  says "skipped". Model stages now gate on **`hasModelCredentials(env)`** (the selected
+  provider's key — provider-agnostic), not a hard `ANTHROPIC_API_KEY` check. The translation
+  set is **loaded/validated on every run** (and registered to LangSmith when enabled) and
+  **judged when possible**: the judge stage runs when a `judgeRunner` is injected OR
+  (`hasModelCredentials` for the judge provider AND `AYA_JUDGE_MODEL`) — grading each example's
+  `referenceContextualMeaning` as the candidate. The report's
   `translation` block carries `exampleCount`, `rows[]` (per-dimension scores + `pass`),
   `passRate`, `threshold`, and now a `scoreDistribution` (mean of each judge dimension — the
   sixth headline metric); `printReport` prints the pass rate + the dimension means or a "judge
@@ -123,8 +127,26 @@ fully offline when its env is absent.
   first real Anthropic run (encode PRD/spec bars, not observed scores); its GATES are the real CI
   knobs — idiom splits ceiling 0 (tolerance 0), reconstruction floor 1.0, OCR floor 0.95, plus
   per-metric regression tolerances.
+- `src/compare.ts` — the **side-by-side model comparison** harness (the payoff of the
+  provider-agnostic LLM layer, [[llm-provider-abstraction]]). `runEvalsMatrix(configs, options)`
+  runs `runEvals` once per `{ label, env }` config (sequentially; shared injected runners/options
+  apply to all, only `env` differs) and returns labelled reports; `printMatrix` prints ONE
+  side-by-side table (OCR char/status acc, boundary F1, idiom splits, reconstruction, pinyin
+  mismatch, judge pass rate + 3 dimension means) — "skipped" cells when a model lacks creds.
+  `loadCompareConfig` reads `models.compare.json`; an `isMain()` CLI (`npm run eval:compare`)
+  prints the table. Keys come from the ambient env — the JSON holds no secrets.
+- `models.compare.json` — committed template listing the models to compare (provider + model
+  ids only, `<...>` placeholders for ids). Sits at the package root (loaded by a walk-up finder).
 - `src/index.ts` — barrel re-exporting datasets, scorers, pinyin, translation (judge),
-  langsmith, runner, and the report/baseline gate.
+  langsmith, runner, the report/baseline gate, and the compare harness.
+
+## Model comparison (eval:compare)
+
+`npm run eval:compare -w packages/evals` answers "is Gemini as good as Claude here?" with data:
+it runs the **same** datasets + scorers against every model in `models.compare.json` on identical
+inputs and prints one table. Because prompts/schemas are shared and only provider/model env
+differs, the comparison is apples-to-apples. Offline (no provider keys) every column is "skipped"
+— the wiring is verifiable without network; real numbers need the [[multi-provider-keys]] handoff.
 
 ## CI gate (ci-evals-gate)
 

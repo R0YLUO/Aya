@@ -1,37 +1,52 @@
 # LLM Pipeline
 
 All model interaction lives in `packages/llm`, isolated behind two functions — `runOcr` and
-`analyzeText` — so the rest of the system never imports LangChain or knows which model is in
-use (North Star: *Extensible*). The pipeline is deliberately **two calls, end to end**.
+`analyzeText` — so the rest of the system never imports LangChain or knows which model/provider is
+in use (North Star: *Extensible*). The pipeline is deliberately **two calls, end to end**.
 
 ```
 image (S3) ──①──▶ runOcr ──▶ fullText ──②──▶ analyzeText ──▶ Phrase[]
-                  (Claude vision)            (Claude + structured output)
+                  (vision OCR)            (structured output)
 ```
 
 - **Library:** LangChain (TypeScript).
-- **Model:** Claude (a current vision-capable model; the exact id is config, see below).
+- **Provider-agnostic:** the chat model is built by LangChain's universal `initChatModel`, so the
+  **provider** (`anthropic` / `google-genai` / `openai`) and **model id** are config, not code. The
+  default is Anthropic vision; switching to Gemini/OpenAI is a config change (see ADR-0012).
 - **Tracing/evals:** every call runs under LangSmith (see [`05-observability.md`](./05-observability.md)
   and [`06-evals.md`](./06-evals.md)).
 
 ## Model configuration
 
-The model id, temperature, and max tokens are **configuration, not hard-coded**, so we can
-upgrade models or tune per-stage without touching call sites.
+Provider, model id, temperature, and max tokens are **configuration, not hard-coded**, so we can
+switch providers, upgrade models, or tune per-stage without touching call sites. A single
+`PROVIDERS` table (the only place provider names appear in source) records each provider's API-key
+env var, whether it accepts `temperature`, and its token-ceiling field name.
 
 ```ts
-// packages/llm/src/config.ts (illustrative)
-export const llmConfig = {
-  ocr:      { model: process.env.AYA_OCR_MODEL,      temperature: 0, maxTokens: 4096 },
-  analysis: { model: process.env.AYA_ANALYSIS_MODEL, temperature: 0, maxTokens: 8192 },
-};
+// packages/llm/src/config.ts (illustrative) — loadLlmConfig resolves a per-stage ModelSpec
+// from AYA_LLM_PROVIDER (+ optional AYA_OCR_PROVIDER/AYA_ANALYSIS_PROVIDER overrides),
+// AYA_OCR_MODEL / AYA_ANALYSIS_MODEL, and the selected provider's key env var.
+{
+  ocr:      { provider: "anthropic", model: env.AYA_OCR_MODEL,      temperature: 0, maxTokens: 4096, … },
+  analysis: { provider: "anthropic", model: env.AYA_ANALYSIS_MODEL, temperature: 0, maxTokens: 8192, … },
+}
 ```
 
 `temperature: 0` for both — we want determinism and reproducibility for an accuracy-critical,
-eval-gated pipeline (North Stars: *Accurate*, *Reliable*).
+eval-gated pipeline (North Stars: *Accurate*, *Reliable*). Whether `0` is actually sent is
+per-provider (`sendTemperature`): current Anthropic models reject the param; Gemini/OpenAI accept it.
 
-> When choosing or updating the Claude model id, consult the `claude-api` skill / current
-> Anthropic model list rather than hard-coding from memory.
+> When choosing or updating a model id, consult the `claude-api` skill / the provider's current
+> model list rather than hard-coding from memory. Provider + model id are env config, never literals.
+
+## Comparing providers/models
+
+Because the pipeline is provider-agnostic and prompts/schemas are shared, the **same** eval datasets
+and scorers can be run against multiple models on identical inputs. `npm run eval:compare -w
+packages/evals` runs the suite once per model in `packages/evals/models.compare.json` and prints one
+side-by-side table — the data we use to decide whether a provider swap holds quality (North Star:
+*Accurate*; see [`06-evals.md`](./06-evals.md) and ADR-0012).
 
 ---
 

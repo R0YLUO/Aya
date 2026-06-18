@@ -69,7 +69,7 @@ export async function analyzeText(
   if (runner === undefined) {
     const cfg = loadLlmConfig(options.env);
     model = cfg.analysis.model;
-    runner = createStructuredRunner(cfg.analysis, cfg.apiKey, AnalysisResultSchema);
+    runner = await createStructuredRunner(cfg.analysis, AnalysisResultSchema);
   }
 
   const runConfig = buildRunConfig({ stage: 'analysis', model, pageId }, options.env);

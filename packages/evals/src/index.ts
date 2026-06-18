@@ -89,6 +89,14 @@ export type {
   RunEvalsOptions,
 } from './run-evals.js';
 
+export { runEvalsMatrix, printMatrix, loadCompareConfig } from './compare.js';
+export type {
+  ModelRunConfig,
+  LabeledReport,
+  RunEvalsMatrixOptions,
+  CompareConfigFile,
+} from './compare.js';
+
 export {
   extractMetrics,
   compareToBaseline,

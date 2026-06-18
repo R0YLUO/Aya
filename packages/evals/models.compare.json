@@ -1,0 +1,32 @@
+{
+  "description": "Models to compare side-by-side via `npm run eval:compare -w packages/evals`. Each entry sets only the provider + model ids; API KEYS COME FROM THE AMBIENT ENVIRONMENT (process.env) — this file holds NO secrets. Fill the <...> model ids with current provider model ids (consult the claude-api skill / each provider's model list — do not guess). Columns without the matching provider key present print as 'skipped'.",
+  "models": [
+    {
+      "label": "anthropic",
+      "env": {
+        "AYA_LLM_PROVIDER": "anthropic",
+        "AYA_OCR_MODEL": "<anthropic-vision-model-id>",
+        "AYA_ANALYSIS_MODEL": "<anthropic-model-id>",
+        "AYA_JUDGE_MODEL": "<anthropic-model-id>"
+      }
+    },
+    {
+      "label": "gemini",
+      "env": {
+        "AYA_LLM_PROVIDER": "google-genai",
+        "AYA_OCR_MODEL": "<gemini-vision-model-id>",
+        "AYA_ANALYSIS_MODEL": "<gemini-model-id>",
+        "AYA_JUDGE_MODEL": "<gemini-model-id>"
+      }
+    },
+    {
+      "label": "openai",
+      "env": {
+        "AYA_LLM_PROVIDER": "openai",
+        "AYA_OCR_MODEL": "<openai-vision-model-id>",
+        "AYA_ANALYSIS_MODEL": "<openai-model-id>",
+        "AYA_JUDGE_MODEL": "<openai-model-id>"
+      }
+    }
+  ]
+}

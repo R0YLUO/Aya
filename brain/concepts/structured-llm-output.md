@@ -3,8 +3,8 @@ title: Structured LLM output, retries & tracing
 type: concept
 packages: [llm]
 tasks: [llm-run-ocr, llm-model-config, llm-langsmith-wiring, llm-analyze-text]
-summary: The StructuredRunner pattern every LLM call follows — Zod-bound runner, injectable for tests, bounded retries, defensive re-parse, tagged runs.
-updated: 2026-06-10
+summary: The StructuredRunner pattern every LLM call follows — Zod-bound provider-agnostic runner (initChatModel), injectable for tests, bounded retries, defensive re-parse, tagged runs.
+updated: 2026-06-18
 ---
 
 # Structured LLM output (the pattern for every call)
@@ -18,8 +18,10 @@ Established by `runOcr`; `analyzeText` and any future call must follow it.
    (diffable, eval-gated).
 2. **`StructuredRunner<T>`** (`model.ts`): the only model surface call sites see —
    `invoke(messages, config) => Promise<T>`. Production impl =
-   `createStructuredRunner(stageConfig, apiKey, schema)` (ChatAnthropic +
-   `withStructuredOutput`). Tests inject a fake runner; **no test makes a live call**.
+   `await createStructuredRunner(spec, schema)` — **async, provider-agnostic**: builds the
+   model via LangChain's universal `initChatModel` from a `ModelSpec` (provider + model + key,
+   resolved from env) and binds `withStructuredOutput` ([[llm-provider-abstraction]]). Tests
+   inject a fake runner; **no test makes a live call**.
 3. **Lazy config**: only resolve `loadLlmConfig` / build the real runner when no
    runner was injected, so importing the module never requires env vars.
 4. **`withRetry`** around the invoke: bounded exponential backoff (default 3
@@ -39,8 +41,10 @@ caller maps both to [error envelopes](./error-handling.md).
 
 ## Known wrinkles
 
-- `temperature` is config'd as 0 but **not sent** to the API by default — see
+- `temperature` is config'd as 0 but sent **per-provider** (anthropic omits it) — see
   [decision](../decisions/temperature-param-omitted.md).
+- The runner factory is **async** (initChatModel dynamically imports the provider package), so
+  call sites `await createStructuredRunner(...)`.
 - `TransientLlmError` is defined but unused — `withRetry` retries all errors by
   default. Neither `runOcr` nor `analyzeText` wraps errors in it.
 - `analyzeText` uses `maxAttempts: 2` (not the `withRetry` default of 3) for the inner

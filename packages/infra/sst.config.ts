@@ -178,16 +178,21 @@ export default $config({
     // Environment injected into the API Lambda. The repository reads the table
     // name from `AYA_TABLE_NAME`, the presign/scan path reads the bucket name
     // from `AYA_UPLOAD_BUCKET`, the short-URL service reads `AYA_WEB_BASE_URL`,
-    // and @aya/llm reads the model ids + keys (brain/concepts/env-and-config.md).
-    // `link: [table, uploadBucket]` grants the Lambda least-privilege IAM to
-    // exactly those two resources (SST derives the policy from the links).
+    // and @aya/llm reads the provider, model ids + keys
+    // (brain/concepts/env-and-config.md). `link: [table, uploadBucket]` grants the
+    // Lambda least-privilege IAM to exactly those two resources (SST derives the
+    // policy from the links).
     const apiEnvironment = {
       AYA_TABLE_NAME: table.name,
       AYA_UPLOAD_BUCKET: uploadBucket.name,
       AYA_WEB_BASE_URL: webBaseUrl,
-      // Model ids are config, not literals (CLAUDE.md #9): sourced from the
-      // deploy env. Placeholders keep synthesis self-contained; a real deploy
-      // sets the actual Claude ids per stage.
+      // The LLM layer is provider-agnostic (LangChain initChatModel). Provider +
+      // model ids are config, not literals (CLAUDE.md #9): sourced from the deploy
+      // env. Defaults keep synthesis self-contained and preserve the current
+      // Anthropic deploy; switching to Gemini/OpenAI = set AYA_LLM_PROVIDER +
+      // that provider's key (e.g. GOOGLE_API_KEY / OPENAI_API_KEY as added secrets)
+      // and the matching model ids — no code change.
+      AYA_LLM_PROVIDER: process.env["AYA_LLM_PROVIDER"] ?? "anthropic",
       AYA_OCR_MODEL: process.env["AYA_OCR_MODEL"] ?? "set-AYA_OCR_MODEL",
       AYA_ANALYSIS_MODEL:
         process.env["AYA_ANALYSIS_MODEL"] ?? "set-AYA_ANALYSIS_MODEL",

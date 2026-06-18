@@ -193,3 +193,34 @@ Mobile e2e (Detox / App Automate) — premature: the RN app has no native shell 
 team owns its internals. Mocking the API from the test with `page.route()` — impossible for this
 app: the share page fetches server-side (SSR), so interception must happen at the process
 boundary, hence the stub server.
+
+---
+
+## ADR-0012 — Provider-agnostic LLM via LangChain `initChatModel` (no hard-wired provider)
+**Status:** accepted · **Date:** 2026-06-18
+
+**Decision.** `packages/llm` is **provider-agnostic**. The real chat model is built by LangChain's
+universal `initChatModel(model, { modelProvider, … })`, so the provider (Anthropic, Google Gemini
+`google-genai`, OpenAI) and model id are **config strings from env**, not code. A single
+`PROVIDERS` table (the only place provider names appear in source) maps each provider to its API-key
+env var, whether it accepts a `temperature` param, and its token-ceiling field name. `loadLlmConfig`
+resolves a per-stage `ModelSpec`; `createStructuredRunner(spec, schema)` is the one factory and the
+rest of the system still depends only on the narrow `StructuredRunner` interface. Switching provider
+is a config change (`AYA_LLM_PROVIDER` + that provider's key + model ids) — **no refactor, no
+breakage**. The eval suite is provider-agnostic too, and `npm run eval:compare` runs the *same*
+datasets/scorers against N models side-by-side (`models.compare.json`) so providers can be compared
+on identical inputs.
+
+**Why.** *Extensible* — model logic stays isolated behind one interface; adding a provider is one
+`PROVIDERS` row + its `@langchain/*` package, never a call-site change. *Accurate* — the comparison
+harness lets us swap a model and **prove** with evals whether quality holds before adopting it
+(no prompt/schema change, so the gate is apples-to-apples). *Reliable* — structured output stays
+Zod-validated; behaviour differences across providers (e.g. Gemini's structured-output quirks) are
+caught by the evals, not in production.
+
+**Alternatives.** The `litellm` JS SDK (`litellmjs`) — **rejected**: no vision, no structured
+output, no Gemini, unmaintained since Jan 2024; it cannot run Aya's OCR (vision) or Zod-bound calls.
+A LiteLLM proxy gateway — rejected for now: it adds a service to run/deploy for a single-app MVP,
+whereas `initChatModel` needs no external infra. Per-provider client classes wired by hand — rejected:
+`initChatModel` already is that registry, maintained upstream. The `temperature`-omission decision is
+no longer Anthropic-specific — it is generalised into the per-provider `sendTemperature` flag.

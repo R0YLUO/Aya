@@ -2,16 +2,17 @@
 title: "@aya/llm"
 type: package
 packages: [llm]
-tasks: [llm-package-scaffold, llm-model-config, llm-langsmith-wiring, llm-ocr-schema-and-prompt, llm-run-ocr, llm-analysis-schema-and-prompt, llm-analyze-text]
-summary: The two LLM calls (runOcr and analyzeText both built), structured-output runner, retry helper, LangSmith tagging, env-sourced model config.
-updated: 2026-06-10
+tasks: [llm-package-scaffold, llm-model-config, llm-langsmith-wiring, llm-ocr-schema-and-prompt, llm-run-ocr, llm-analysis-schema-and-prompt, llm-analyze-text, llm-provider-abstraction]
+summary: The two LLM calls (runOcr and analyzeText), a PROVIDER-AGNOSTIC structured-output runner (LangChain initChatModel), retry helper, LangSmith tagging, env-sourced provider+model config.
+updated: 2026-06-18
 ---
 
 # @aya/llm (as built)
 
 The rest of the system touches the model only via `runOcr` / `analyzeText` from the
-barrel (`packages/llm/src/index.ts`). LangChain (`@langchain/anthropic`) never leaks
-past this package.
+barrel (`packages/llm/src/index.ts`). LangChain never leaks past this package, and the
+package is **provider-agnostic** — the provider (anthropic / google-genai / openai) is
+env config, not code ([[llm-provider-abstraction]]).
 
 ## Status
 
@@ -20,14 +21,18 @@ past this package.
 
 ## What lives where
 
-- `src/config.ts` — `loadLlmConfig(env?)` reads `AYA_OCR_MODEL`, `AYA_ANALYSIS_MODEL`,
-  `ANTHROPIC_API_KEY`; throws on missing values. Temperature is fixed `0`; token
-  ceilings `OCR_MAX_TOKENS = 4096`, `ANALYSIS_MAX_TOKENS = 8192`. No model id literal
-  appears anywhere in the package.
-- `src/model.ts` — `StructuredRunner<T>` (the narrow invoke-only interface call sites
-  depend on), `createStructuredRunner` (ChatAnthropic + `withStructuredOutput`),
-  `withRetry` (bounded exponential backoff, default 3 attempts / 200ms base),
-  `TransientLlmError`.
+- `src/config.ts` — the `PROVIDERS` registry (`anthropic` / `google-genai` / `openai` →
+  `keyEnv`, `sendTemperature`, `maxTokensField`); the **only** place provider names appear.
+  `loadLlmConfig(env?)` reads `AYA_LLM_PROVIDER` (+ optional `AYA_OCR_PROVIDER` /
+  `AYA_ANALYSIS_PROVIDER`), `AYA_OCR_MODEL`, `AYA_ANALYSIS_MODEL`, and the selected provider's
+  key var; returns a per-stage **`ModelSpec`**; throws on missing/unknown values. Temperature
+  fixed `0`; ceilings `OCR_MAX_TOKENS = 4096`, `ANALYSIS_MAX_TOKENS = 8192`. `hasModelCredentials`
+  reports whether a real runner can be built. No provider name or model id literal escapes this
+  table.
+- `src/model.ts` — `StructuredRunner<T>` (the narrow invoke-only interface call sites depend on),
+  `createStructuredRunner(spec, schema)` — **async**, builds the model via LangChain's universal
+  `initChatModel` (provider-agnostic) and binds `withStructuredOutput`; `withRetry` (bounded
+  exponential backoff, default 3 attempts / 200ms base), `TransientLlmError`.
 - `src/ocr.ts` — `OcrResultSchema` (`status: ok|unreadable|no_chinese_text` +
   `fullText`, with a refinement that `fullText === ""` unless ok) and
   `buildOcrSystemPrompt()`.
@@ -62,9 +67,16 @@ past this package.
 
 ## Gotchas
 
-- `createStructuredRunner` defaults to **not sending `temperature`** — see
-  [decision: temperature param omitted](../decisions/temperature-param-omitted.md).
+- `createStructuredRunner` is **async** (initChatModel dynamically imports the provider
+  package) — every caller `await`s it (`run-ocr.ts`, `analyze-text.ts`, evals judge).
+- Whether `temperature: 0` is sent is **per-provider** via the `PROVIDERS` table's
+  `sendTemperature` (anthropic false, others true) — see
+  [decision: temperature param](../decisions/temperature-param-omitted.md).
+- Token ceiling field differs per provider (`maxTokens` vs Gemini's `maxOutputTokens`) —
+  handled by `maxTokensField` in the table.
 - `withRetry` retries *all* errors by default (`isRetryable` defaults to true);
   `TransientLlmError` exists but `runOcr` does not currently wrap errors in it.
-- Model ids: per CLAUDE.md rule #9, consult the `claude-api` skill when choosing env
-  values; nothing in code pins a model.
+- Provider + model ids are env config (per CLAUDE.md rule #9, consult the `claude-api` skill /
+  the provider's model list); nothing in code pins a provider or model.
+- Real per-provider quality numbers are unproven until `eval:compare` runs with keys — see the
+  open handoff [multi-provider-keys](../handoffs/multi-provider-keys.md).

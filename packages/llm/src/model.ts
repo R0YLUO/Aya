@@ -1,46 +1,50 @@
-// Shared model plumbing: the structured-output runner abstraction, the
-// ChatAnthropic factory, and a bounded-retry helper.
+// Shared model plumbing: the provider-agnostic structured-output runner factory
+// and a bounded-retry helper.
 //
 // Call sites (runOcr / analyzeText) depend only on the `StructuredRunner`
-// interface, never on ChatAnthropic directly — this keeps LangChain isolated
+// interface, never on a concrete provider class — this keeps LangChain isolated
 // (North Star: Extensible) and lets tests inject a mock runner so verification
-// never makes a live model call.
+// never makes a live model call. The real runner is built by LangChain's universal
+// `initChatModel`, so the provider (Anthropic / Gemini / OpenAI / …) is selected
+// purely from a {@link ModelSpec} resolved out of env — no provider-specific code
+// lives here.
 
-import { ChatAnthropic } from '@langchain/anthropic';
+import { initChatModel } from 'langchain/chat_models/universal';
 import type { BaseMessageLike } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { z } from 'zod';
-import type { StageConfig } from './config.js';
+import type { ModelSpec } from './config.js';
 
 /**
  * Minimal structured-output runner: invoke with messages + run config, get back
  * a value already parsed/validated against the bound schema. Both the real
- * ChatAnthropic-backed runner and test mocks implement this.
+ * provider-backed runner and test mocks implement this.
  */
 export interface StructuredRunner<T> {
   invoke(messages: BaseMessageLike[], config?: RunnableConfig): Promise<T>;
 }
 
 /**
- * Build a ChatAnthropic model for a stage and bind a Zod schema for structured
- * output, yielding a {@link StructuredRunner}.
+ * Build a provider-agnostic chat model for a stage and bind a Zod schema for
+ * structured output, yielding a {@link StructuredRunner}.
  *
- * `temperature` comes from config (0). Current Anthropic models reject the
- * `temperature` parameter; pass `sendTemperature: false` (the default for the
- * production factory) to omit it from the request while keeping the value as
- * documented config.
+ * The provider, model id, key, and token ceiling all come from the {@link ModelSpec}
+ * (resolved from env). `temperature` is 0 but only sent when the provider accepts it
+ * (`spec.sendTemperature`) — current Anthropic models reject the param while Gemini /
+ * OpenAI want it for determinism. The token ceiling is passed under the provider's
+ * own field name (`maxTokens` vs Gemini's `maxOutputTokens`).
+ *
+ * Async because `initChatModel` dynamically imports the provider integration package.
  */
-export function createStructuredRunner<S extends z.ZodTypeAny>(
-  stage: StageConfig,
-  apiKey: string,
+export async function createStructuredRunner<S extends z.ZodTypeAny>(
+  spec: ModelSpec,
   schema: S,
-  opts: { sendTemperature?: boolean } = {},
-): StructuredRunner<z.infer<S>> {
-  const model = new ChatAnthropic({
-    model: stage.model,
-    apiKey,
-    maxTokens: stage.maxTokens,
-    ...(opts.sendTemperature ? { temperature: stage.temperature } : {}),
+): Promise<StructuredRunner<z.infer<S>>> {
+  const model = await initChatModel(spec.model, {
+    modelProvider: spec.provider,
+    apiKey: spec.apiKey,
+    [spec.maxTokensField]: spec.maxTokens,
+    ...(spec.sendTemperature ? { temperature: spec.temperature } : {}),
   });
   // withStructuredOutput returns a Runnable<input, z.infer<S>>; the StructuredRunner
   // interface is the narrow invoke-only surface we depend on.

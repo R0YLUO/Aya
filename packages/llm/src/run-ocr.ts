@@ -76,7 +76,7 @@ export async function runOcr(
   if (runner === undefined) {
     const cfg = loadLlmConfig(options.env);
     model = cfg.ocr.model;
-    runner = createStructuredRunner(cfg.ocr, cfg.apiKey, OcrResultSchema);
+    runner = await createStructuredRunner(cfg.ocr, OcrResultSchema);
   }
 
   const messages = buildOcrMessages(image);

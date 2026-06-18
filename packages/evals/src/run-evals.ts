@@ -14,6 +14,7 @@
 import {
   runOcr,
   analyzeText,
+  hasModelCredentials,
   type OcrResult,
   type AnalysisResult,
   type StructuredRunner,
@@ -287,7 +288,8 @@ export async function runEvals(options: RunEvalsOptions = {}): Promise<EvalRepor
   const ocrData = await loadOcrDataset(options.ocrVersion);
   const analysisData = await loadAnalysisDataset(options.analysisVersion);
   // Loaded (and validated) on every run so a malformed fixture fails loudly, even
-  // though the LLM-as-judge translation scorer is deferred (needs the Anthropic key).
+  // though the LLM-as-judge translation scorer is deferred (needs the judge
+  // provider's credentials).
   const translationData = await loadTranslationDataset(options.translationVersion);
 
   const lsEnabled = isLangSmithEnabled(env);
@@ -333,15 +335,18 @@ export async function runEvals(options: RunEvalsOptions = {}): Promise<EvalRepor
     registered = ocrReg && analysisReg && translationReg;
   }
 
-  // Decide whether the model path can run: a runner is injected, or a real key.
-  const hasApiKey = Boolean(env['ANTHROPIC_API_KEY']);
-  const canRunOcr = options.ocrRunner !== undefined || hasApiKey;
-  const canRunAnalysis = options.analysisRunner !== undefined || hasApiKey;
-  // The judge additionally needs its (separate) model id from env.
+  // Decide whether the model path can run: a runner is injected, or the selected
+  // provider's credentials are present (provider-agnostic — works for any provider).
+  const hasCreds = hasModelCredentials(env);
+  const canRunOcr = options.ocrRunner !== undefined || hasCreds;
+  const canRunAnalysis = options.analysisRunner !== undefined || hasCreds;
+  // The judge resolves its own provider (AYA_JUDGE_PROVIDER → AYA_LLM_PROVIDER) and
+  // additionally needs its (separate) model id from env.
   const judgeThreshold = options.judgeThreshold ?? DEFAULT_JUDGE_THRESHOLD;
+  const judgeProvider = env['AYA_JUDGE_PROVIDER'] ?? env['AYA_LLM_PROVIDER'];
   const canRunJudge =
     options.judgeRunner !== undefined ||
-    (hasApiKey && Boolean(env['AYA_JUDGE_MODEL']));
+    (hasModelCredentials(env, judgeProvider) && Boolean(env['AYA_JUDGE_MODEL']));
 
   const ocrRows = canRunOcr
     ? await Promise.all(
@@ -419,7 +424,7 @@ export function printReport(report: EvalReport): void {
   console.log('Aya eval report');
   console.log('================');
   if (report.ocr.rows.length === 0) {
-    console.log('OCR     : skipped (no ANTHROPIC_API_KEY / injected runner)');
+    console.log('OCR     : skipped (no provider credentials / injected runner)');
   } else {
     console.log(
       `OCR     : ${report.ocr.rows.length} examples | char acc ${pct(
@@ -437,7 +442,7 @@ export function printReport(report: EvalReport): void {
     }
   }
   if (report.analysis.rows.length === 0) {
-    console.log('Analysis: skipped (no ANTHROPIC_API_KEY / injected runner)');
+    console.log('Analysis: skipped (no provider credentials / injected runner)');
   } else {
     console.log(
       `Analysis: ${report.analysis.rows.length} examples | boundary F1 ${pct(
@@ -467,7 +472,7 @@ export function printReport(report: EvalReport): void {
   }
   if (report.translation.rows.length === 0) {
     console.log(
-      `Translation: ${report.translation.exampleCount} examples loaded | judge skipped (no judge runner / ANTHROPIC_API_KEY + AYA_JUDGE_MODEL)`,
+      `Translation: ${report.translation.exampleCount} examples loaded | judge skipped (no judge runner / judge provider credentials + AYA_JUDGE_MODEL)`,
     );
   } else {
     console.log(

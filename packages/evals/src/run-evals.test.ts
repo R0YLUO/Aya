@@ -78,7 +78,7 @@ test('runEvals: perfect offline run scores 100% with injected runners', async ()
   assert.equal(report.langsmith.registered, false);
 });
 
-test('runEvals: skips model stages when no runner and no ANTHROPIC_API_KEY', async () => {
+test('runEvals: skips model stages when no runner and no provider credentials', async () => {
   const report = await runEvals({ env: {} });
   assert.equal(report.ocr.rows.length, 0);
   assert.equal(report.analysis.rows.length, 0);

@@ -2,9 +2,9 @@
 title: Environment variables & injected config
 type: concept
 packages: [llm, api, web, mobile, evals]
-tasks: [llm-model-config, llm-langsmith-wiring, evals-scorer-translation-judge]
-summary: Every env var the system reads today, who reads it, and the edge-injection convention (services never read env themselves).
-updated: 2026-06-13
+tasks: [llm-model-config, llm-langsmith-wiring, evals-scorer-translation-judge, llm-provider-abstraction]
+summary: Every env var the system reads today, who reads it, and the edge-injection convention (services never read env themselves). LLM layer is provider-agnostic — AYA_LLM_PROVIDER picks the provider + key var.
+updated: 2026-06-18
 ---
 
 # Env & config (as built)
@@ -18,10 +18,13 @@ defaulting to `process.env`, so tests pin values without mutating globals.
 
 | Variable | Read by | Purpose |
 |---|---|---|
-| `AYA_OCR_MODEL` | `llm/src/config.ts` (required) | Claude model id, OCR stage |
-| `AYA_ANALYSIS_MODEL` | `llm/src/config.ts` (required) | Claude model id, analysis stage |
-| `AYA_JUDGE_MODEL` | `evals/src/translation.ts` (`loadJudgeConfig`, required for the real judge path) | Claude model id for the LLM-as-judge translation scorer |
-| `ANTHROPIC_API_KEY` | `llm/src/config.ts` + `evals` judge (required) | Anthropic key (never logged) |
+| `AYA_LLM_PROVIDER` | `llm/src/config.ts` (required) | provider id: `anthropic` / `google-genai` / `openai` |
+| `AYA_OCR_PROVIDER` / `AYA_ANALYSIS_PROVIDER` | `llm/src/config.ts` (optional) | per-stage provider override (mix providers in one run) |
+| `AYA_OCR_MODEL` | `llm/src/config.ts` (required) | model id, OCR stage (provider-native) |
+| `AYA_ANALYSIS_MODEL` | `llm/src/config.ts` (required) | model id, analysis stage (provider-native) |
+| `AYA_JUDGE_PROVIDER` | `evals/src/translation.ts` (optional, → `AYA_LLM_PROVIDER`) | provider for the LLM-as-judge (pin it independent of candidates) |
+| `AYA_JUDGE_MODEL` | `evals/src/translation.ts` (`loadJudgeConfig`, required for the real judge path) | model id for the LLM-as-judge translation scorer |
+| `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` / `OPENAI_API_KEY` | `llm/src/config.ts` + `evals` judge (the selected provider's is required) | provider API key (never logged); which one is read comes from the `PROVIDERS` table |
 | `LANGCHAIN_TRACING_V2` | `llm/src/tracing.ts` (+ LangChain itself) | "true"/"1" enables LangSmith tracing |
 | `LANGCHAIN_API_KEY`, `LANGCHAIN_PROJECT` | LangChain directly | LangSmith destination |
 | `AYA_ENV` | `llm/src/tracing.ts` | env tag on traces (defaults "dev") |
@@ -44,10 +47,11 @@ vars and constructs the services — closing the loop the earlier infra tasks se
   synthesis placeholder.
 
 `infra-api-gateway-lambda` sets all of the above on the Lambda's `environment`,
-plus the model/LangSmith vars (`AYA_OCR_MODEL`, `AYA_ANALYSIS_MODEL`,
-`LANGCHAIN_*`, `AYA_ENV`) `@aya/llm` reads, with `ANTHROPIC_API_KEY` /
-`LANGCHAIN_API_KEY` sourced from `sst.Secret`s (`AnthropicApiKey`,
-`LangsmithApiKey`).
+plus the provider/model/LangSmith vars (`AYA_LLM_PROVIDER` defaulting to `anthropic`,
+`AYA_OCR_MODEL`, `AYA_ANALYSIS_MODEL`, `LANGCHAIN_*`, `AYA_ENV`) `@aya/llm` reads, with
+`ANTHROPIC_API_KEY` / `LANGCHAIN_API_KEY` sourced from `sst.Secret`s (`AnthropicApiKey`,
+`LangsmithApiKey`). Switching provider in a deploy = set `AYA_LLM_PROVIDER` + add that
+provider's key secret (`GOOGLE_API_KEY` / `OPENAI_API_KEY`).
 
 `infra-web-hosting` wires the web hosting env (`sst.aws.Nextjs`): it injects
 `AYA_API_BASE_URL` + `NEXT_PUBLIC_AYA_API_BASE_URL` (both = `api.url`) into the web
